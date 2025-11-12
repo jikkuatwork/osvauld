@@ -26,6 +26,10 @@ export class BaseRepository<T extends { id: string }> {
     return await this.table.toArray();
   }
 
+  async list(): Promise<T[]> {
+    return await this.getAll();
+  }
+
   async create(data: T): Promise<T> {
     await this.table.add(data);
     return data;

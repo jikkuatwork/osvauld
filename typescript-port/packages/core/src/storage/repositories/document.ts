@@ -3,12 +3,12 @@
  */
 
 import type { Document } from '../../types';
-import type { OsvauldDB } from '../indexeddb';
+import type { Table } from 'dexie';
 import { BaseRepository } from './base';
 
 export class DocumentRepository extends BaseRepository<Document> {
-  constructor(db: OsvauldDB) {
-    super(db.documents);
+  constructor(table: Table<Document, string>) {
+    super(table);
   }
 
   async getByOwner(ownerId: string): Promise<Document[]> {
