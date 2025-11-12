@@ -4,7 +4,15 @@
  * Main application logic
  */
 
-import { Osvauld, type Document as OsvauldDocument, type Folder, type FolderNode, Capability } from '@osvauld/core';
+import {
+  Osvauld,
+  type Document as OsvauldDocument,
+  type Folder,
+  type FolderNode,
+  Capability,
+  authenticateWithMetaMask,
+  isMetaMaskAvailable
+} from '@osvauld/core';
 
 // Extended folder type with children (for tree rendering)
 interface FolderWithChildren extends Folder {
@@ -126,21 +134,41 @@ async function handleRegister(username: string, password: string, email?: string
 async function handleMetaMaskConnect() {
   try {
     // Check if MetaMask is installed
-    if (typeof window.ethereum === 'undefined') {
+    if (!isMetaMaskAvailable()) {
       showError('MetaMask is not installed. Please install MetaMask to continue.');
       return;
     }
 
-    showError('');
+    showError('Connecting to MetaMask...');
 
-    // Request account access
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    const account = accounts[0];
+    // Authenticate with MetaMask
+    const metamaskAccount = await authenticateWithMetaMask();
 
-    // For demo purposes, use MetaMask address as username
-    // In production, you'd implement proper Web3 authentication
-    showError(`MetaMask connected: ${account}`);
-    alert('MetaMask authentication is a work in progress. Please use username/password login for now.');
+    // Use Ethereum address as username (shortened)
+    const username = `metamask_${metamaskAccount.address.slice(2, 10)}`;
+
+    // Use signature as deterministic password
+    // This allows the same MetaMask account to always generate the same credentials
+    const password = metamaskAccount.signature;
+
+    showError('Authenticating...');
+
+    // Try to login first
+    try {
+      await app.login(username, password);
+      showApp(username);
+      showError('');
+    } catch (loginErr) {
+      // If login fails, register new account
+      try {
+        showError('Creating new account...');
+        await app.register(username, password);
+        showApp(username);
+        showError('');
+      } catch (registerErr) {
+        throw new Error('Failed to authenticate with MetaMask');
+      }
+    }
 
   } catch (err) {
     showError(err instanceof Error ? err.message : 'MetaMask connection failed');
