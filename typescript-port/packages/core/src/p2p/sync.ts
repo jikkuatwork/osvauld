@@ -4,6 +4,7 @@
  * Handles synchronization of CRDT updates over P2P connections.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from '../crypto/buffer-utils';
 import * as Y from 'yjs';
 import type { IPeer, P2PMessage, MessageType } from './interface';
 import { MessageType as MsgType } from './interface';
@@ -80,7 +81,7 @@ export class P2PSyncManager {
 
     const message: P2PMessage = {
       type: MsgType.SYNC_REQUEST,
-      payload: Buffer.from(stateVector).toString('base64'),
+      payload: toBase64(stateVector),
       timestamp: Date.now(),
       sender: 'self',
     };
@@ -97,7 +98,7 @@ export class P2PSyncManager {
 
     const message: P2PMessage = {
       type: MsgType.SYNC_RESPONSE,
-      payload: Buffer.from(missingUpdates).toString('base64'),
+      payload: toBase64(missingUpdates),
       timestamp: Date.now(),
       sender: 'self',
     };
@@ -108,7 +109,7 @@ export class P2PSyncManager {
     const ourStateVector = Y.encodeStateVector(this.ydoc);
     const requestMessage: P2PMessage = {
       type: MsgType.SYNC_REQUEST,
-      payload: Buffer.from(ourStateVector).toString('base64'),
+      payload: toBase64(ourStateVector),
       timestamp: Date.now(),
       sender: 'self',
     };
@@ -138,7 +139,7 @@ export class P2PSyncManager {
   private async broadcastUpdate(update: Uint8Array): Promise<void> {
     const message: P2PMessage = {
       type: MsgType.UPDATE,
-      payload: Buffer.from(update).toString('base64'),
+      payload: toBase64(update),
       timestamp: Date.now(),
       sender: 'self',
     };
@@ -152,7 +153,7 @@ export class P2PSyncManager {
    */
   private handleMessage(message: P2PMessage, peer: IPeer): void {
     try {
-      const payload = Buffer.from(message.payload as string, 'base64');
+      const payload = fromBase64(message.payload as string);
 
       switch (message.type) {
         case MsgType.SYNC_REQUEST:
@@ -203,7 +204,7 @@ export function createSyncManager(ydoc: Y.Doc): P2PSyncManager {
 export async function sendUpdate(peer: IPeer, update: Uint8Array): Promise<void> {
   const message: P2PMessage = {
     type: MsgType.UPDATE,
-    payload: Buffer.from(update).toString('base64'),
+    payload: toBase64(update),
     timestamp: Date.now(),
     sender: 'self',
   };

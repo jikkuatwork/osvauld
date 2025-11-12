@@ -7,6 +7,7 @@
 import { generateKeyPair, sign, verify } from '../crypto/ed25519';
 import { deriveKey } from '../crypto/argon2';
 import { importKey, encrypt, decrypt } from '../crypto/aes';
+import { toHex } from '../crypto/buffer-utils';
 
 /**
  * MetaMask provider interface
@@ -82,9 +83,7 @@ export async function connectMetaMask(): Promise<string> {
  */
 export function generateChallenge(): string {
   const timestamp = Date.now();
-  const random = Buffer.from(
-    crypto.getRandomValues(new Uint8Array(16))
-  ).toString('hex');
+  const random = toHex(crypto.getRandomValues(new Uint8Array(16)));
   return `Osvauld Login Challenge\nTimestamp: ${timestamp}\nNonce: ${random}`;
 }
 

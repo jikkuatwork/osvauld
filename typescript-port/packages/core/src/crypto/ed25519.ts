@@ -5,6 +5,7 @@
  * Uses @noble/ed25519 library for secure, audited implementation.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from './buffer-utils';
 import * as ed from '@noble/ed25519';
 
 /**
@@ -76,26 +77,26 @@ export async function verify(
  * Export public key as hex string
  */
 export function publicKeyToHex(publicKey: Uint8Array): string {
-  return Buffer.from(publicKey).toString('hex');
+  return toHex(publicKey);
 }
 
 /**
  * Import public key from hex string
  */
 export function publicKeyFromHex(hex: string): Uint8Array {
-  return Uint8Array.from(Buffer.from(hex, 'hex'));
+  return fromHex(hex);
 }
 
 /**
  * Export private key as hex string (use carefully!)
  */
 export function privateKeyToHex(privateKey: Uint8Array): string {
-  return Buffer.from(privateKey).toString('hex');
+  return toHex(privateKey);
 }
 
 /**
  * Import private key from hex string
  */
 export function privateKeyFromHex(hex: string): Uint8Array {
-  return Uint8Array.from(Buffer.from(hex, 'hex'));
+  return fromHex(hex);
 }

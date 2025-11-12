@@ -4,6 +4,7 @@
  * In-memory peer connection for sandbox testing.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from '../crypto/buffer-utils';
 import { EventEmitter } from 'events';
 import { v4 as uuidv4 } from 'uuid';
 import type {
@@ -161,7 +162,7 @@ export class MockSignaling {
   private signals = new Map<string, unknown>();
 
   async generateShareCode(offer: unknown): Promise<string> {
-    const code = Buffer.from(JSON.stringify(offer)).toString('base64').slice(0, 12);
+    const code = toBase64(new TextEncoder().encode(JSON.stringify(offer))).slice(0, 12);
     this.signals.set(code, offer);
     return code;
   }

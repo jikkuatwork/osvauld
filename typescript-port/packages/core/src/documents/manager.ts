@@ -14,6 +14,7 @@ import {
   reEncryptDocument,
   type EncryptedDocument,
 } from './encryption';
+import { toBase64, fromBase64 } from '../crypto/buffer-utils';
 
 /**
  * Document Manager class
@@ -47,11 +48,11 @@ export class DocumentManager {
       title,
       ownerId,
       folderId,
-      encryptedContent: Buffer.from(encrypted.content.ciphertext).toString('base64'),
-      contentIV: Buffer.from(encrypted.content.iv).toString('base64'),
-      encryptedKey: Buffer.from(encrypted.encryptedKey.ciphertext).toString('base64'),
-      keyIV: Buffer.from(encrypted.encryptedKey.iv).toString('base64'),
-      signature: Buffer.from(encrypted.signature).toString('base64'),
+      encryptedContent: toBase64(encrypted.content.ciphertext),
+      contentIV: toBase64(encrypted.content.iv),
+      encryptedKey: toBase64(encrypted.encryptedKey.ciphertext),
+      keyIV: toBase64(encrypted.encryptedKey.iv),
+      signature: toBase64(encrypted.signature),
       createdAt: new Date(),
       updatedAt: new Date(),
       tags: [],
@@ -88,14 +89,14 @@ export class DocumentManager {
     // Reconstruct encrypted document
     const encrypted: EncryptedDocument = {
       content: {
-        ciphertext: Uint8Array.from(Buffer.from(document.encryptedContent, 'base64')),
-        iv: Uint8Array.from(Buffer.from(document.contentIV, 'base64')),
+        ciphertext: fromBase64(document.encryptedContent),
+        iv: fromBase64(document.contentIV),
       },
       encryptedKey: {
-        ciphertext: Uint8Array.from(Buffer.from(document.encryptedKey, 'base64')),
-        iv: Uint8Array.from(Buffer.from(document.keyIV, 'base64')),
+        ciphertext: fromBase64(document.encryptedKey),
+        iv: fromBase64(document.keyIV),
       },
-      signature: Uint8Array.from(Buffer.from(document.signature, 'base64')),
+      signature: fromBase64(document.signature),
       metadata: {
         docId: document.id,
         ownerId: document.ownerId,
@@ -133,14 +134,14 @@ export class DocumentManager {
     // Reconstruct current encrypted document
     const encrypted: EncryptedDocument = {
       content: {
-        ciphertext: Uint8Array.from(Buffer.from(document.encryptedContent, 'base64')),
-        iv: Uint8Array.from(Buffer.from(document.contentIV, 'base64')),
+        ciphertext: fromBase64(document.encryptedContent),
+        iv: fromBase64(document.contentIV),
       },
       encryptedKey: {
-        ciphertext: Uint8Array.from(Buffer.from(document.encryptedKey, 'base64')),
-        iv: Uint8Array.from(Buffer.from(document.keyIV, 'base64')),
+        ciphertext: fromBase64(document.encryptedKey),
+        iv: fromBase64(document.keyIV),
       },
-      signature: Uint8Array.from(Buffer.from(document.signature, 'base64')),
+      signature: fromBase64(document.signature),
       metadata: {
         docId: document.id,
         ownerId: document.ownerId,
@@ -155,9 +156,9 @@ export class DocumentManager {
     // Update document
     const updated: Document = {
       ...document,
-      encryptedContent: Buffer.from(reEncrypted.content.ciphertext).toString('base64'),
-      contentIV: Buffer.from(reEncrypted.content.iv).toString('base64'),
-      signature: Buffer.from(reEncrypted.signature).toString('base64'),
+      encryptedContent: toBase64(reEncrypted.content.ciphertext),
+      contentIV: toBase64(reEncrypted.content.iv),
+      signature: toBase64(reEncrypted.signature),
       updatedAt: new Date(),
     };
 

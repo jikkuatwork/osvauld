@@ -4,6 +4,7 @@
  * Provides account creation and login using BIP39 mnemonic phrases.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from '../crypto/buffer-utils';
 import {
   generateMnemonic,
   mnemonicToSeed,
@@ -78,7 +79,7 @@ export async function createAccount(
   const signingKey = await generateEd25519KeyPair();
 
   // Generate user ID from public key
-  const userId = Buffer.from(signingKey.publicKey).toString('hex').slice(0, 16);
+  const userId = toHex(signingKey.publicKey).slice(0, 16);
 
   // Encrypt mnemonic with password
   const salt = generateSalt();
@@ -116,11 +117,9 @@ export function createUserData(
     publicKey: account.signingKey.publicKey,
     encryptedPrivateKey,
     metadata: {
-      encryptedMnemonic: Buffer.from(
-        account.encryptedMnemonic.ciphertext
-      ).toString('base64'),
-      mnemonicIV: Buffer.from(account.encryptedMnemonic.iv).toString('base64'),
-      passwordSalt: Buffer.from(account.salt).toString('base64'),
+      encryptedMnemonic: toBase64(account.encryptedMnemonic.ciphertext),
+      mnemonicIV: toBase64(account.encryptedMnemonic.iv),
+      passwordSalt: toBase64(account.salt),
     },
   };
 }
@@ -151,7 +150,7 @@ export async function login(
   };
 
   // Derive key from password
-  const salt = Uint8Array.from(Buffer.from(metadata.passwordSalt, 'base64'));
+  const salt = Uint8Array.from(fromBase64(metadata.passwordSalt));
   const passwordKey = deriveKey(password, salt, {
     memoryCost: 1024,
     timeCost: 1,
@@ -163,17 +162,15 @@ export async function login(
     const aesKey = await importKey(passwordKey);
     const encryptedMnemonic = {
       ciphertext: Uint8Array.from(
-        Buffer.from(metadata.encryptedMnemonic, 'base64')
+        fromBase64(metadata.encryptedMnemonic)
       ),
-      iv: Uint8Array.from(Buffer.from(metadata.mnemonicIV, 'base64')),
+      iv: Uint8Array.from(fromBase64(metadata.mnemonicIV)),
     };
 
     await decrypt(encryptedMnemonic, aesKey);
 
     // If decryption succeeds, create session
-    const sessionToken = Buffer.from(
-      crypto.getRandomValues(new Uint8Array(32))
-    ).toString('hex');
+    const sessionToken = toHex(crypto.getRandomValues(new Uint8Array(32)));
 
     // For now, we'll use the stored public key and a placeholder for private key
     // In a real implementation, you'd decrypt the stored private key
@@ -229,7 +226,7 @@ export async function changePassword(
   };
 
   const oldSalt = Uint8Array.from(
-    Buffer.from(metadata.passwordSalt, 'base64')
+    fromBase64(metadata.passwordSalt)
   );
   const oldPasswordKey = deriveKey(oldPassword, oldSalt, {
     memoryCost: 1024,
@@ -240,9 +237,9 @@ export async function changePassword(
 
   const encryptedMnemonic = {
     ciphertext: Uint8Array.from(
-      Buffer.from(metadata.encryptedMnemonic, 'base64')
+      fromBase64(metadata.encryptedMnemonic)
     ),
-    iv: Uint8Array.from(Buffer.from(metadata.mnemonicIV, 'base64')),
+    iv: Uint8Array.from(fromBase64(metadata.mnemonicIV)),
   };
 
   // Decrypt with old password

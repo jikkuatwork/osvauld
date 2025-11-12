@@ -5,6 +5,7 @@
  */
 
 import * as Y from 'yjs';
+import { toBase64 } from '../crypto/buffer-utils';
 
 /**
  * Encodes an update as Uint8Array
@@ -154,7 +155,7 @@ export function areDocsInSync(doc1: Y.Doc, doc2: Y.Doc): boolean {
 export function getDocHash(ydoc: Y.Doc): string {
   const state = Y.encodeStateAsUpdate(ydoc);
   // Simple hash by converting to base64
-  return Buffer.from(state).toString('base64');
+  return toBase64(state);
 }
 
 /**

@@ -7,6 +7,7 @@
 import * as Y from 'yjs';
 import { encrypt, decrypt } from '../crypto/aes';
 import type { EncryptedData } from '../crypto/aes';
+import { toBase64, fromBase64 } from '../crypto/buffer-utils';
 
 /**
  * Saved document state
@@ -112,7 +113,7 @@ export async function loadEncryptedState(
 export function serializeSavedState(savedState: SavedDocumentState): string {
   return JSON.stringify({
     docId: savedState.docId,
-    state: Buffer.from(savedState.state).toString('base64'),
+    state: toBase64(savedState.state),
     timestamp: savedState.timestamp.toISOString(),
     version: savedState.version,
   });
@@ -126,7 +127,7 @@ export function deserializeSavedState(serialized: string): SavedDocumentState {
 
   return {
     docId: parsed.docId,
-    state: Uint8Array.from(Buffer.from(parsed.state, 'base64')),
+    state: fromBase64(parsed.state),
     timestamp: new Date(parsed.timestamp),
     version: parsed.version,
   };
@@ -139,8 +140,8 @@ export function serializeEncryptedState(encryptedSaved: EncryptedSavedState): st
   return JSON.stringify({
     docId: encryptedSaved.docId,
     encryptedState: {
-      ciphertext: Buffer.from(encryptedSaved.encryptedState.ciphertext).toString('base64'),
-      iv: Buffer.from(encryptedSaved.encryptedState.iv).toString('base64'),
+      ciphertext: toBase64(encryptedSaved.encryptedState.ciphertext),
+      iv: toBase64(encryptedSaved.encryptedState.iv),
     },
     timestamp: encryptedSaved.timestamp.toISOString(),
     version: encryptedSaved.version,
@@ -156,8 +157,8 @@ export function deserializeEncryptedState(serialized: string): EncryptedSavedSta
   return {
     docId: parsed.docId,
     encryptedState: {
-      ciphertext: Uint8Array.from(Buffer.from(parsed.encryptedState.ciphertext, 'base64')),
-      iv: Uint8Array.from(Buffer.from(parsed.encryptedState.iv, 'base64')),
+      ciphertext: fromBase64(parsed.encryptedState.ciphertext),
+      iv: fromBase64(parsed.encryptedState.iv),
     },
     timestamp: new Date(parsed.timestamp),
     version: parsed.version,

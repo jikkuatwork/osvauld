@@ -5,6 +5,8 @@
  * Uses Web Crypto API for secure, native implementation.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from './buffer-utils';
+
 /**
  * Encrypted data structure
  */
@@ -132,14 +134,14 @@ export async function importKey(keyData: Uint8Array): Promise<CryptoKey> {
  */
 export async function exportKeyBase64(key: CryptoKey): Promise<string> {
   const keyBytes = await exportKey(key);
-  return Buffer.from(keyBytes).toString('base64');
+  return toBase64(keyBytes);
 }
 
 /**
  * Import key from base64 string
  */
 export async function importKeyBase64(base64: string): Promise<CryptoKey> {
-  const keyBytes = Uint8Array.from(Buffer.from(base64, 'base64'));
+  const keyBytes = fromBase64(base64);
   return await importKey(keyBytes);
 }
 

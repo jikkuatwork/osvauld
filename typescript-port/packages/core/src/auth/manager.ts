@@ -4,6 +4,7 @@
  * Unified authentication interface supporting multiple auth methods.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from '../crypto/buffer-utils';
 import { createAccount, login as mnemonicLogin, createUserData, type AccountInfo } from './mnemonic';
 import type { UserRepository } from '../storage/repositories/user';
 import type { User } from '../types/user';
@@ -73,10 +74,10 @@ export class AuthenticationManager {
       createdAt: new Date(),
       updatedAt: new Date(),
       metadata: {
-        encryptedMnemonic: Buffer.from(account.encryptedMnemonic.ciphertext).toString('base64'),
-        mnemonicIV: Buffer.from(account.encryptedMnemonic.iv).toString('base64'),
-        passwordSalt: Buffer.from(account.salt).toString('base64'),
-        privateKeyIV: Buffer.from(encryptedPrivateKey.iv).toString('base64'),
+        encryptedMnemonic: toBase64(account.encryptedMnemonic.ciphertext),
+        mnemonicIV: toBase64(account.encryptedMnemonic.iv),
+        passwordSalt: toBase64(account.salt),
+        privateKeyIV: toBase64(encryptedPrivateKey.iv),
       },
     };
 
@@ -112,7 +113,7 @@ export class AuthenticationManager {
       privateKeyIV: string;
     };
 
-    const salt = Uint8Array.from(Buffer.from(metadata.passwordSalt, 'base64'));
+    const salt = fromBase64(metadata.passwordSalt);
     const passwordKey = deriveKey(password, salt, {
       memoryCost: 1024,
       timeCost: 1,
@@ -122,7 +123,7 @@ export class AuthenticationManager {
     const aesKey = await importKey(passwordKey);
     const encryptedPrivateKey = {
       ciphertext: user.encryptedPrivateKey || new Uint8Array(32),
-      iv: Uint8Array.from(Buffer.from(metadata.privateKeyIV, 'base64')),
+      iv: fromBase64(metadata.privateKeyIV),
     };
 
     const privateKeyBuffer = await decrypt(encryptedPrivateKey, aesKey);

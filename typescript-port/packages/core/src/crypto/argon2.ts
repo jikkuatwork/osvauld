@@ -5,6 +5,7 @@
  * Uses @noble/hashes for implementation.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from './buffer-utils';
 import { argon2id } from '@noble/hashes/argon2';
 
 /**
@@ -97,8 +98,8 @@ export function verifyPassword(
  */
 export function exportDerivedKey(salt: Uint8Array, key: Uint8Array) {
   return {
-    salt: Buffer.from(salt).toString('base64'),
-    key: Buffer.from(key).toString('base64'),
+    salt: toBase64(salt),
+    key: toBase64(key),
   };
 }
 
@@ -113,7 +114,7 @@ export function importDerivedKey(exported: {
   key: Uint8Array;
 } {
   return {
-    salt: Uint8Array.from(Buffer.from(exported.salt, 'base64')),
-    key: Uint8Array.from(Buffer.from(exported.key, 'base64')),
+    salt: fromBase64(exported.salt),
+    key: fromBase64(exported.key),
   };
 }

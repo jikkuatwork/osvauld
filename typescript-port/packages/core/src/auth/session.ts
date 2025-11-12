@@ -4,6 +4,8 @@
  * Handles user sessions, tokens, and session lifecycle.
  */
 
+import { toBase64, fromBase64, toHex, fromHex } from '../crypto/buffer-utils';
+
 /**
  * Session information
  */
@@ -60,18 +62,14 @@ export function createSession(
  * Generate session ID
  */
 function generateSessionId(): string {
-  return Buffer.from(crypto.getRandomValues(new Uint8Array(16))).toString(
-    'hex'
-  );
+  return toHex(crypto.getRandomValues(new Uint8Array(16)));
 }
 
 /**
  * Generate session token
  */
 function generateSessionToken(): string {
-  return Buffer.from(crypto.getRandomValues(new Uint8Array(32))).toString(
-    'hex'
-  );
+  return toHex(crypto.getRandomValues(new Uint8Array(32)));
 }
 
 /**
