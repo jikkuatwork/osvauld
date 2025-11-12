@@ -10,7 +10,6 @@ import {
   type Folder,
   type FolderNode,
   Capability,
-  authenticateWithMetaMask,
   isMetaMaskAvailable
 } from '@osvauld/core';
 
@@ -34,8 +33,11 @@ let currentDocumentId: string | null = null;
 
 // Initialize app
 function init() {
+  console.log('[App] Initializing Osvauld demo app...');
   app = new Osvauld({ dbName: 'osvauld-demo' });
+  console.log('[App] Osvauld instance created with database: osvauld-demo');
   setupEventListeners();
+  console.log('[App] Event listeners set up, ready for user interaction');
 }
 
 // ====================  Event Listeners ====================
@@ -113,81 +115,109 @@ function switchTab(tab: string) {
 
 async function handleLogin(username: string, password: string) {
   try {
+    console.log('[Auth] Login attempt for username:', username);
     showError('');
     await app.login(username, password);
+    console.log('[Auth] Login successful for:', username);
     showApp(username);
   } catch (err) {
+    console.error('[Auth] Login failed for', username, ':', err);
     showError(err instanceof Error ? err.message : 'Login failed');
   }
 }
 
 async function handleRegister(username: string, password: string, email?: string) {
   try {
+    console.log('[Auth] Registration attempt for username:', username, 'email:', email);
     showError('');
     await app.register(username, password, email);
+    console.log('[Auth] Registration successful for:', username);
     showApp(username);
   } catch (err) {
+    console.error('[Auth] Registration failed for', username, ':', err);
     showError(err instanceof Error ? err.message : 'Registration failed');
   }
 }
 
 async function handleMetaMaskConnect() {
   try {
+    console.log('[MetaMask] Starting authentication flow...');
+
     // Check if MetaMask is installed
     if (!isMetaMaskAvailable()) {
+      console.error('[MetaMask] MetaMask not available');
       showError('MetaMask is not installed. Please install MetaMask to continue.');
       return;
     }
 
+    console.log('[MetaMask] MetaMask is available');
     showError('Connecting to MetaMask...');
 
-    // Authenticate with MetaMask
-    const metamaskAccount = await authenticateWithMetaMask();
+    // Get MetaMask account
+    if (!window.ethereum) {
+      throw new Error('MetaMask ethereum provider not found');
+    }
+    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+    const address = accounts[0];
+    console.log('[MetaMask] Connected to address:', address);
 
     // Use Ethereum address as username (shortened)
-    const username = `metamask_${metamaskAccount.address.slice(2, 10)}`;
+    const username = `metamask_${address.slice(2, 10)}`;
+    console.log('[MetaMask] Generated username:', username);
 
-    // Use signature as deterministic password
-    // This allows the same MetaMask account to always generate the same credentials
-    const password = metamaskAccount.signature;
+    // Use a deterministic password based on the address
+    // This ensures the same MetaMask account always has the same credentials
+    const password = `metamask_${address.toLowerCase()}`;
+    console.log('[MetaMask] Generated deterministic password (first 20 chars):', password.slice(0, 20) + '...');
 
     showError('Authenticating...');
 
     // Try to login first
     try {
+      console.log('[MetaMask] Attempting login...');
       await app.login(username, password);
+      console.log('[MetaMask] Login successful!');
       showApp(username);
       showError('');
     } catch (loginErr) {
+      console.log('[MetaMask] Login failed, attempting registration...', loginErr);
       // If login fails, register new account
       try {
         showError('Creating new account...');
+        console.log('[MetaMask] Registering new account...');
         await app.register(username, password);
+        console.log('[MetaMask] Registration successful!');
         showApp(username);
         showError('');
       } catch (registerErr) {
-        throw new Error('Failed to authenticate with MetaMask');
+        console.error('[MetaMask] Registration failed:', registerErr);
+        throw new Error(`Failed to authenticate with MetaMask: ${registerErr instanceof Error ? registerErr.message : 'Unknown error'}`);
       }
     }
 
   } catch (err) {
+    console.error('[MetaMask] Authentication error:', err);
     showError(err instanceof Error ? err.message : 'MetaMask connection failed');
   }
 }
 
 function handleLogout() {
+  console.log('[Auth] Logging out user');
   app.logout();
   document.getElementById('app-screen')!.style.display = 'none';
   document.getElementById('login-screen')!.style.display = 'block';
   currentDocumentId = null;
+  console.log('[Auth] Logout complete');
 }
 
 function showApp(username: string) {
+  console.log('[App] Showing app for user:', username);
   document.getElementById('login-screen')!.style.display = 'none';
   document.getElementById('app-screen')!.style.display = 'block';
   document.getElementById('username-display')!.textContent = username;
 
   // Load initial data
+  console.log('[App] Loading initial documents and folders...');
   loadDocuments();
   loadFolders();
 }
@@ -206,10 +236,12 @@ function showError(message: string) {
 
 async function loadDocuments() {
   try {
+    console.log('[Documents] Loading documents...');
     const docs = await app.listDocuments();
+    console.log('[Documents] Loaded', docs.length, 'documents');
     renderDocuments(docs);
   } catch (err) {
-    console.error('Failed to load documents:', err);
+    console.error('[Documents] Failed to load documents:', err);
   }
 }
 
@@ -338,11 +370,13 @@ function closeEditor() {
 
 async function loadFolders() {
   try {
+    console.log('[Folders] Loading folder tree...');
     const folderNodes = await app.getFolderTree();
+    console.log('[Folders] Loaded', folderNodes.length, 'root folders');
     const folders = folderNodes.map(convertFolderNode);
     renderFolders(folders);
   } catch (err) {
-    console.error('Failed to load folders:', err);
+    console.error('[Folders] Failed to load folders:', err);
   }
 }
 
