@@ -12,11 +12,20 @@ export interface Document {
   /** Document title */
   title: string;
 
-  /** Encrypted content */
-  encryptedContent: Uint8Array;
+  /** Encrypted content (base64) */
+  encryptedContent: string;
 
-  /** Encryption IV */
-  iv: Uint8Array;
+  /** Content encryption IV (base64) */
+  contentIV: string;
+
+  /** Encrypted document key (base64) */
+  encryptedKey: string;
+
+  /** Key encryption IV (base64) */
+  keyIV: string;
+
+  /** Document signature (base64) */
+  signature: string;
 
   /** Owner user ID */
   ownerId: string;
@@ -48,8 +57,11 @@ export interface Document {
  */
 export interface CreateDocumentData {
   title: string;
-  encryptedContent: Uint8Array;
-  iv: Uint8Array;
+  encryptedContent: string;
+  contentIV: string;
+  encryptedKey: string;
+  keyIV: string;
+  signature: string;
   ownerId: string;
   folderId?: string;
   tags?: string[];
@@ -61,8 +73,11 @@ export interface CreateDocumentData {
  */
 export interface UpdateDocumentData {
   title?: string;
-  encryptedContent?: Uint8Array;
-  iv?: Uint8Array;
+  encryptedContent?: string;
+  contentIV?: string;
+  encryptedKey?: string;
+  keyIV?: string;
+  signature?: string;
   folderId?: string;
   tags?: string[];
   isFavorite?: boolean;

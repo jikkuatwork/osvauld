@@ -17,6 +17,7 @@ export * from './osvauld';
 export type { User } from './types/user';
 export type { Document } from './types/document';
 export type { Folder } from './types/folder';
+export type { FolderNode } from './documents/folders';
 export type { ShareRecord } from './types/share';
 export type { ShareLink } from './types/share-link';
 
@@ -24,8 +25,6 @@ export type { ShareLink } from './types/share-link';
 export * from './crypto/aes';
 export * from './crypto/argon2';
 export * from './crypto/ed25519';
-export * from './crypto/bip39';
-export * from './crypto/utils';
 
 // Authentication
 export * from './auth/manager';
@@ -45,7 +44,7 @@ export * from './crdt/persistence';
 // P2P
 export * from './p2p/interface';
 export * from './p2p/sync';
-export * from './p2p/mock-peer';
+// export * from './p2p/mock-peer'; // Node.js only - uses EventEmitter
 
 // Search
 export * from './search/indexer';

@@ -53,7 +53,7 @@ export async function encrypt(
       tagLength: 128, // 128-bit auth tag
     },
     key,
-    dataBytes
+    dataBytes as BufferSource
   );
 
   return {
@@ -77,11 +77,11 @@ export async function decrypt(
     const decrypted = await crypto.subtle.decrypt(
       {
         name: 'AES-GCM',
-        iv: encrypted.iv,
+        iv: encrypted.iv as BufferSource,
         tagLength: 128,
       },
       key,
-      encrypted.ciphertext
+      encrypted.ciphertext as BufferSource
     );
 
     return new Uint8Array(decrypted);
@@ -117,7 +117,7 @@ export async function exportKey(key: CryptoKey): Promise<Uint8Array> {
 export async function importKey(keyData: Uint8Array): Promise<CryptoKey> {
   return await crypto.subtle.importKey(
     'raw',
-    keyData,
+    keyData as BufferSource,
     {
       name: 'AES-GCM',
       length: 256,
@@ -164,7 +164,7 @@ export async function deriveKeyFromPassword(
   return await crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
-      salt,
+      salt: salt as BufferSource,
       iterations,
       hash: 'SHA-256',
     },

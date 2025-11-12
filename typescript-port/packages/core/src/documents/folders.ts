@@ -34,7 +34,7 @@ export class FolderManager {
       id: uuidv4(),
       name,
       ownerId,
-      parentId,
+      parentId: parentId ?? null,
       createdAt: new Date(),
       updatedAt: new Date(),
     };
@@ -139,7 +139,7 @@ export class FolderManager {
     while (currentId) {
       const folder = await this.getFolder(currentId, userId);
       path.unshift(folder);
-      currentId = folder.parentId;
+      currentId = folder.parentId ?? undefined;
     }
 
     return path;
@@ -174,7 +174,7 @@ export class FolderManager {
 
     const updated: Folder = {
       ...folder,
-      parentId: newParentId,
+      parentId: newParentId ?? null,
       updatedAt: new Date(),
     };
 
@@ -199,7 +199,7 @@ export class FolderManager {
       }
 
       const folder = await this.getFolder(currentId, userId);
-      currentId = folder.parentId;
+      currentId = folder.parentId ?? undefined;
     }
 
     return false;

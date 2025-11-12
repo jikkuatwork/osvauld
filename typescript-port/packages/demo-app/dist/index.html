@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Osvauld - Secure Password Manager</title>
+    <script type="module" crossorigin src="/assets/index-CU9uNjkU.js"></script>
+    <link rel="stylesheet" crossorigin href="/assets/index-m0a9fCN6.css">
+  </head>
+  <body>
+    <!-- Login Screen -->
+    <div id="login-screen" class="screen">
+      <div class="container">
+        <div class="logo">
+          <h1>🔐 Osvauld</h1>
+          <p>Secure, Decentralized Password Manager</p>
+        </div>
+
+        <div class="auth-card">
+          <div class="auth-tabs">
+            <button class="tab-btn active" data-tab="login">Login</button>
+            <button class="tab-btn" data-tab="register">Register</button>
+          </div>
+
+          <!-- Login Form -->
+          <div id="login-form" class="tab-content active">
+            <h2>Welcome Back</h2>
+            <form id="loginForm">
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="login-username" required />
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="login-password" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Login</button>
+            </form>
+          </div>
+
+          <!-- Register Form -->
+          <div id="register-form" class="tab-content">
+            <h2>Create Account</h2>
+            <form id="registerForm">
+              <div class="form-group">
+                <label>Username</label>
+                <input type="text" id="register-username" required />
+              </div>
+              <div class="form-group">
+                <label>Email (optional)</label>
+                <input type="email" id="register-email" />
+              </div>
+              <div class="form-group">
+                <label>Password</label>
+                <input type="password" id="register-password" required />
+              </div>
+              <button type="submit" class="btn btn-primary">Register</button>
+            </form>
+          </div>
+
+          <div class="divider">OR</div>
+
+          <button id="metamaskBtn" class="btn btn-metamask">
+            🦊 Connect MetaMask
+          </button>
+        </div>
+
+        <div id="error-message" class="error-message" style="display: none"></div>
+      </div>
+    </div>
+
+    <!-- Main App Screen -->
+    <div id="app-screen" class="screen" style="display: none">
+      <header>
+        <div class="header-left">
+          <h1>🔐 Osvauld</h1>
+        </div>
+        <div class="header-right">
+          <span id="username-display"></span>
+          <button id="logoutBtn" class="btn btn-secondary">Logout</button>
+        </div>
+      </header>
+
+      <div class="app-container">
+        <!-- Sidebar -->
+        <aside class="sidebar">
+          <div class="sidebar-section">
+            <button id="newDocBtn" class="btn btn-primary btn-block">
+              ➕ New Document
+            </button>
+          </div>
+
+          <div class="sidebar-section">
+            <h3>Folders</h3>
+            <div id="folderTree"></div>
+            <button id="newFolderBtn" class="btn btn-secondary btn-sm">
+              ➕ New Folder
+            </button>
+          </div>
+
+          <div class="sidebar-section">
+            <button id="statsBtn" class="btn btn-secondary btn-block">
+              📊 Statistics
+            </button>
+          </div>
+        </aside>
+
+        <!-- Main Content -->
+        <main class="main-content">
+          <!-- Search Bar -->
+          <div class="search-bar">
+            <input
+              type="text"
+              id="searchInput"
+              placeholder="🔍 Search documents..."
+            />
+            <label>
+              <input type="checkbox" id="fuzzySearch" />
+              Fuzzy Search
+            </label>
+          </div>
+
+          <!-- Document List -->
+          <div id="documentList" class="document-list"></div>
+
+          <!-- Document Editor -->
+          <div id="documentEditor" style="display: none">
+            <div class="editor-header">
+              <input
+                type="text"
+                id="docTitle"
+                class="doc-title-input"
+                placeholder="Document title..."
+              />
+              <div class="editor-actions">
+                <button id="favoriteBtn" class="btn btn-icon">⭐</button>
+                <button id="shareBtn" class="btn btn-primary">Share</button>
+                <button id="saveBtn" class="btn btn-primary">Save</button>
+                <button id="closeEditorBtn" class="btn btn-secondary">Close</button>
+              </div>
+            </div>
+            <textarea
+              id="docContent"
+              class="doc-content-textarea"
+              placeholder="Document content..."
+            ></textarea>
+            <div class="editor-footer">
+              <div>
+                <label>Tags (comma-separated):</label>
+                <input type="text" id="docTags" placeholder="work, important" />
+              </div>
+            </div>
+          </div>
+        </main>
+      </div>
+    </div>
+
+    <!-- Modals -->
+    <div id="modal" class="modal" style="display: none">
+      <div class="modal-content">
+        <span class="modal-close">&times;</span>
+        <div id="modalBody"></div>
+      </div>
+    </div>
+
+  </body>
+</html>

@@ -23,7 +23,8 @@ import type { User } from './types/user';
 import type { Document } from './types/document';
 import type { Folder } from './types/folder';
 import type { ShareRequest, Capability } from './ucan/types';
-import type * as Y from 'yjs';
+import type { FolderNode } from './documents/folders';
+import * as Y from 'yjs';
 
 /**
  * Osvauld service configuration
@@ -43,8 +44,8 @@ export class Osvauld {
   private sharing: SharingManager;
   private searchIndexer: SearchIndexer;
 
-  private currentUser?: User;
-  private currentSession?: { privateKey: Uint8Array; publicKey: Uint8Array };
+  protected currentUser?: User;
+  protected currentSession?: { privateKey: Uint8Array; publicKey: Uint8Array };
 
   constructor(config: OsvauldConfig = {}) {
     // Initialize database
@@ -182,6 +183,14 @@ export class Osvauld {
   async updateDocument(documentId: string, content: string): Promise<Document> {
     this.requireAuth();
 
+    // Get document key from sandbox store (simplified for testing)
+    const { getSandboxDocumentKey } = await import('./documents/encryption');
+    const documentKey = getSandboxDocumentKey(documentId);
+
+    if (!documentKey) {
+      throw new Error('Document key not found (sandbox limitation)');
+    }
+
     const doc = await this.documents.updateDocument(
       documentId,
       content,
@@ -189,7 +198,8 @@ export class Osvauld {
       {
         privateKey: this.currentSession!.privateKey,
         publicKey: this.currentSession!.publicKey,
-      }
+      },
+      documentKey
     );
 
     // Update search index
@@ -250,7 +260,7 @@ export class Osvauld {
   /**
    * Gets folder tree
    */
-  async getFolderTree(): Promise<Folder[]> {
+  async getFolderTree(): Promise<FolderNode[]> {
     this.requireAuth();
 
     return await this.folders.getFolderTree(this.currentUser!.id);
@@ -370,21 +380,11 @@ export class Osvauld {
     // Load document content
     const { content } = await this.getDocument(documentId);
 
-    // Try to load persisted CRDT state
+    // Create Y.Doc and initialize with current content
+    // TODO: Implement persisted CRDT state loading
     const ydoc = createYDoc(documentId);
-    const persistedState = await loadEncryptedState(
-      documentId,
-      this.currentSession!.privateKey
-    );
-
-    if (persistedState) {
-      // Apply persisted state
-      Y.applyUpdate(ydoc, persistedState);
-    } else {
-      // Initialize with current content
-      const ytext = getYText(ydoc);
-      ytext.insert(0, content);
-    }
+    const ytext = getYText(ydoc);
+    ytext.insert(0, content);
 
     // Create sync manager for P2P collaboration
     const syncManager = new P2PSyncManager(ydoc);
@@ -408,8 +408,8 @@ export class Osvauld {
     // Update document with new content
     await this.updateDocument(documentId, content);
 
-    // Save CRDT state
-    await saveEncryptedState(ydoc, documentId, this.currentSession!.privateKey);
+    // TODO: Implement persisted CRDT state saving
+    // await saveEncryptedState(ydoc, documentId, key);
   }
 
   // ==================== Utilities ====================

@@ -4,11 +4,20 @@
  * Main application logic
  */
 
-import { Osvauld, type Document as OsvauldDocument, type Folder, Capability } from '@osvauld/core';
+import { Osvauld, type Document as OsvauldDocument, type Folder, type FolderNode, Capability } from '@osvauld/core';
 
 // Extended folder type with children (for tree rendering)
 interface FolderWithChildren extends Folder {
   children?: FolderWithChildren[];
+}
+
+// Convert FolderNode to FolderWithChildren
+function convertFolderNode(node: FolderNode): FolderWithChildren {
+  const folderWithChildren: FolderWithChildren = {
+    ...node.folder,
+    children: node.children.map(convertFolderNode),
+  };
+  return folderWithChildren;
 }
 
 // Global state
@@ -301,7 +310,8 @@ function closeEditor() {
 
 async function loadFolders() {
   try {
-    const folders = await app.getFolderTree();
+    const folderNodes = await app.getFolderTree();
+    const folders = folderNodes.map(convertFolderNode);
     renderFolders(folders);
   } catch (err) {
     console.error('Failed to load folders:', err);

@@ -119,6 +119,11 @@ export async function verifyUCAN(token: string): Promise<VerificationResult> {
 
     const [headerEncoded, payloadEncoded, signatureEncoded] = parts;
 
+    // Ensure all parts exist
+    if (!headerEncoded || !payloadEncoded || !signatureEncoded) {
+      return { valid: false, error: 'Invalid token format - missing parts' };
+    }
+
     // Decode parts
     const header = decodeJSON<UCAN['header']>(headerEncoded);
     const payload = decodeJSON<UCANPayload>(payloadEncoded);
@@ -216,6 +221,11 @@ export function decodeUCAN(token: string): UCAN | null {
     }
 
     const [headerEncoded, payloadEncoded, signatureEncoded] = parts;
+
+    // Ensure all parts exist
+    if (!headerEncoded || !payloadEncoded || !signatureEncoded) {
+      return null;
+    }
 
     return {
       header: decodeJSON<UCAN['header']>(headerEncoded),
