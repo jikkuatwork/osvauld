@@ -10,6 +10,7 @@ import type {
   ShareRecord,
   Device,
 } from '../types';
+import type { ShareLink } from '../types/share-link';
 
 /**
  * Osvauld database schema
@@ -19,6 +20,7 @@ export class OsvauldDB extends Dexie {
   documents!: Table<Document, string>;
   folders!: Table<Folder, string>;
   shares!: Table<ShareRecord, string>;
+  shareLinks!: Table<ShareLink, string>;
   devices!: Table<Device, string>;
 
   constructor(name = 'osvauld') {
@@ -30,6 +32,7 @@ export class OsvauldDB extends Dexie {
         'id, title, ownerId, folderId, createdAt, updatedAt, *tags',
       folders: 'id, name, ownerId, parentId, createdAt',
       shares: 'id, documentId, ownerId, recipientId, createdAt',
+      shareLinks: 'id, documentId, createdBy, expiresAt, createdAt',
       devices: 'id, userId, name, createdAt',
     });
   }

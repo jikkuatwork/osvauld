@@ -16,6 +16,10 @@ export class BaseRepository<T extends { id: string }> {
     return entity;
   }
 
+  async findById(id: string): Promise<T | undefined> {
+    return await this.table.get(id);
+  }
+
   async getMany(ids: string[]): Promise<T[]> {
     return await this.table.bulkGet(ids).then((results) =>
       results.filter((r): r is T => r !== undefined)
