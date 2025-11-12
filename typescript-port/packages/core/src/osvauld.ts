@@ -61,7 +61,7 @@ export class Osvauld {
     this.documents = new DocumentManager(docRepo);
     this.folders = new FolderManager(folderRepo);
     this.sharing = new SharingManager(shareLinkRepo);
-    this.search = new SearchIndexer();
+    this.searchIndexer = new SearchIndexer();
   }
 
   // ==================== Authentication ====================
