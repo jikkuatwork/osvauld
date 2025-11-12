@@ -7,6 +7,7 @@
  * - Passkey (WebAuthn/FIDO2)
  */
 
+export * from './manager';
 export * from './mnemonic';
 export * from './metamask';
 export * from './passkey';

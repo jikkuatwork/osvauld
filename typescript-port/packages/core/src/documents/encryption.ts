@@ -14,6 +14,12 @@ import type { KeyPair } from '../crypto/ed25519';
 const sandboxKeyStore = new Map<string, CryptoKey>();
 
 /**
+ * Sandbox document key store (stores unencrypted document keys for testing)
+ * In production, document keys would be properly encrypted with user's KEK
+ */
+const sandboxDocumentKeyStore = new Map<string, CryptoKey>();
+
+/**
  * Encrypted document structure
  */
 export interface EncryptedDocument {
@@ -87,7 +93,17 @@ export async function encryptDocument(
     },
   };
 
+  // Store document key in sandbox (for testing)
+  sandboxDocumentKeyStore.set(docId, documentKey);
+
   return { encrypted, documentKey };
+}
+
+/**
+ * Gets a document key from sandbox store (for testing only)
+ */
+export function getSandboxDocumentKey(docId: string): CryptoKey | undefined {
+  return sandboxDocumentKeyStore.get(docId);
 }
 
 /**
