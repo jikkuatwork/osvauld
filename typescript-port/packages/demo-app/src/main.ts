@@ -4,7 +4,12 @@
  * Main application logic
  */
 
-import { Osvauld, type Document, type Folder, Capability } from '@osvauld/core';
+import { Osvauld, type Document as OsvauldDocument, type Folder, Capability } from '@osvauld/core';
+
+// Extended folder type with children (for tree rendering)
+interface FolderWithChildren extends Folder {
+  children?: FolderWithChildren[];
+}
 
 // Global state
 let app: Osvauld;
@@ -102,7 +107,7 @@ async function handleLogin(username: string, password: string) {
 async function handleRegister(username: string, password: string, email?: string) {
   try {
     showError('');
-    await app.register(username, password, { email: email || undefined });
+    await app.register(username, password, email);
     showApp(username);
   } catch (err) {
     showError(err instanceof Error ? err.message : 'Registration failed');
@@ -171,7 +176,7 @@ async function loadDocuments() {
   }
 }
 
-function renderDocuments(docs: Document[]) {
+function renderDocuments(docs: OsvauldDocument[]) {
   const container = document.getElementById('documentList')!;
 
   if (docs.length === 0) {
@@ -213,7 +218,7 @@ function renderDocuments(docs: Document[]) {
 
 async function openDocument(docId: string) {
   try {
-    const { document, content } = await app.getDocument(docId);
+    const { document: doc, content } = await app.getDocument(docId);
     currentDocumentId = docId;
 
     // Show editor
@@ -221,12 +226,12 @@ async function openDocument(docId: string) {
     document.getElementById('documentEditor')!.style.display = 'block';
 
     // Fill editor
-    (document.getElementById('docTitle') as HTMLInputElement).value = document.title;
+    (document.getElementById('docTitle') as HTMLInputElement).value = doc.title;
     (document.getElementById('docContent') as HTMLTextAreaElement).value = content;
-    (document.getElementById('docTags') as HTMLInputElement).value = document.tags?.join(', ') || '';
+    (document.getElementById('docTags') as HTMLInputElement).value = doc.tags?.join(', ') || '';
 
     // Update favorite button
-    document.getElementById('favoriteBtn')!.textContent = document.isFavorite ? '⭐' : '☆';
+    document.getElementById('favoriteBtn')!.textContent = doc.isFavorite ? '⭐' : '☆';
   } catch (err) {
     alert('Failed to open document: ' + (err instanceof Error ? err.message : 'Unknown error'));
   }
@@ -303,7 +308,7 @@ async function loadFolders() {
   }
 }
 
-function renderFolders(folders: Folder[], container?: HTMLElement, depth = 0) {
+function renderFolders(folders: FolderWithChildren[], container?: HTMLElement, depth = 0) {
   if (!container) {
     container = document.getElementById('folderTree')!;
     container.innerHTML = '';
