@@ -1,0 +1,19 @@
+{
+  "name": "@osvauld/demo-app",
+  "version": "0.1.0",
+  "description": "Osvauld demo web application",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@osvauld/core": "file:../core"
+  },
+  "devDependencies": {
+    "@types/node": "^20.10.5",
+    "typescript": "^5.3.3",
+    "vite": "^5.0.10"
+  }
+}
