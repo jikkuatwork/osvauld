@@ -1,0 +1,461 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Two-Tab Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 600px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #f5f5f5;
+        }
+        .box {
+            background: white;
+            padding: 20px;
+            margin: 20px 0;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        h1 { color: #333; }
+        h2 { color: #007bff; font-size: 18px; }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+            width: 100%;
+        }
+        button:hover { background: #0056b3; }
+        button:disabled { background: #ccc; cursor: not-allowed; }
+        textarea {
+            width: 100%;
+            min-height: 100px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 11px;
+            resize: vertical;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+            font-weight: bold;
+        }
+        .status.waiting { background: #fff3cd; color: #856404; }
+        .status.success { background: #d4edda; color: #155724; }
+        .status.error { background: #f8d7da; color: #721c24; }
+        .hidden { display: none; }
+        .console {
+            background: #1e1e1e;
+            color: #d4d4d4;
+            padding: 15px;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 10px 0;
+        }
+        .console div { margin: 2px 0; }
+        .message-box {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            min-height: 100px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .message {
+            padding: 5px;
+            margin: 5px 0;
+            background: white;
+            border-radius: 3px;
+        }
+        input[type="text"] {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 WebRTC Two-Tab Test</h1>
+    <p><strong>Instructions:</strong> Open this page in TWO separate tabs.</p>
+
+    <!-- Step 1: Choose Role -->
+    <div id="step1" class="box">
+        <h2>Step 1: Choose Your Role</h2>
+        <button id="btnInitiator">📱 Tab A - Create Connection</button>
+        <button id="btnResponder">📲 Tab B - Join Connection</button>
+    </div>
+
+    <!-- Initiator Flow -->
+    <div id="initiatorFlow" class="box hidden">
+        <h2>📱 Tab A - Initiator</h2>
+
+        <div id="initiatorStep1">
+            <button id="btnCreateOffer">1. Create Connection Code</button>
+        </div>
+
+        <div id="initiatorStep2" class="hidden">
+            <p><strong>2. Copy this code and paste it in Tab B:</strong></p>
+            <p style="font-size: 12px; color: #666;">(Tap the text below to select all, then copy)</p>
+            <textarea id="offerCode" onclick="this.select()" style="cursor: pointer;"></textarea>
+            <button id="btnCopyOffer">📋 Copy Code</button>
+        </div>
+
+        <div id="initiatorStep3" class="hidden">
+            <p><strong>3. Paste the answer code from Tab B:</strong></p>
+            <textarea id="answerInput" placeholder="Paste answer code here..."></textarea>
+            <button id="btnCompleteConnection">Complete Connection</button>
+        </div>
+
+        <div id="initiatorStatus"></div>
+    </div>
+
+    <!-- Responder Flow -->
+    <div id="responderFlow" class="box hidden">
+        <h2>📲 Tab B - Responder</h2>
+
+        <div id="responderStep1">
+            <p><strong>1. Paste the connection code from Tab A:</strong></p>
+            <textarea id="offerInput" placeholder="Paste connection code here..."></textarea>
+            <button id="btnAcceptOffer">Accept Connection</button>
+        </div>
+
+        <div id="responderStep2" class="hidden">
+            <p><strong>2. Copy this answer code and paste it back in Tab A:</strong></p>
+            <p style="font-size: 12px; color: #666;">(Tap the text below to select all, then copy)</p>
+            <textarea id="answerCode" onclick="this.select()" style="cursor: pointer;"></textarea>
+            <button id="btnCopyAnswer">📋 Copy Answer</button>
+        </div>
+
+        <div id="responderStatus"></div>
+    </div>
+
+    <!-- Connected State -->
+    <div id="connected" class="box hidden">
+        <h2>✅ Connected!</h2>
+        <p>You can now send messages:</p>
+        <input type="text" id="messageInput" placeholder="Type a message...">
+        <button id="btnSend">Send Message</button>
+        <div class="message-box" id="messages"></div>
+    </div>
+
+    <!-- Console -->
+    <div class="box">
+        <h2>📊 Console Log</h2>
+        <div class="console" id="console"></div>
+    </div>
+
+    <script type="module">
+        import { createInitiator, createResponder, generateShareCode, parseShareCode } from './bundle.js';
+
+        const consoleEl = document.getElementById('console');
+        let peer = null;
+        let isInitiator = false;
+
+        function log(msg) {
+            const div = document.createElement('div');
+            div.textContent = `[${new Date().toLocaleTimeString()}] ${msg}`;
+            consoleEl.appendChild(div);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+            console.log(msg);
+        }
+
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        log('🔗 WebRTC Two-Tab Demo v1.3 - iOS copy fix');
+
+        // Step 1: Choose role
+        document.getElementById('btnInitiator').onclick = () => {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('initiatorFlow').classList.remove('hidden');
+            isInitiator = true;
+            log('📱 Selected: Initiator (Tab A)');
+        };
+
+        document.getElementById('btnResponder').onclick = () => {
+            document.getElementById('step1').classList.add('hidden');
+            document.getElementById('responderFlow').classList.remove('hidden');
+            isInitiator = false;
+            log('📲 Selected: Responder (Tab B)');
+        };
+
+        // INITIATOR: Create offer
+        document.getElementById('btnCreateOffer').onclick = async () => {
+            try {
+                log('📡 Creating initiator peer...');
+                peer = createInitiator({
+                    peerId: 'tab-a-' + Date.now(),
+                    trickle: false  // Bundle all ICE candidates into initial offer
+                });
+
+                setupPeerHandlers();
+
+                log('📡 Setting up signal handler...');
+
+                // Set up promise to wait for the FIRST signal (the offer)
+                const offerSignalPromise = new Promise((resolve) => {
+                    peer.once('signal', (signal) => {
+                        log('📡 Offer signal received!');
+                        resolve(signal);
+                    });
+                });
+
+                // Start connection to trigger signal generation
+                log('📡 Starting connection...');
+                peer.connect().catch(() => {});
+
+                // Now wait for the signal
+                log('📡 Waiting for offer signal...');
+                const offerSignal = await offerSignalPromise;
+
+                log('📡 Generating share code...');
+
+                // Generate share code
+                const shareCode = generateShareCode(peer.id, offerSignal);
+                document.getElementById('offerCode').value = shareCode;
+
+                log(`✅ Connection code generated (${shareCode.length} chars)`);
+
+                document.getElementById('initiatorStep1').classList.add('hidden');
+                document.getElementById('initiatorStep2').classList.remove('hidden');
+                document.getElementById('initiatorStep3').classList.remove('hidden');
+
+                showStatus('initiatorStatus', '⏳ Waiting for answer from Tab B...', 'waiting');
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                showStatus('initiatorStatus', `Error: ${error.message}`, 'error');
+            }
+        };
+
+        // INITIATOR: Complete connection with answer
+        document.getElementById('btnCompleteConnection').onclick = () => {
+            try {
+                const answerCodeStr = document.getElementById('answerInput').value.trim();
+                if (!answerCodeStr) {
+                    alert('Please paste the answer code!');
+                    return;
+                }
+
+                log('📡 Parsing answer code...');
+                const { signal } = parseShareCode(answerCodeStr);
+
+                log('📡 Signaling with answer...');
+                peer.signal(signal);
+
+                showStatus('initiatorStatus', '⏳ Connecting...', 'waiting');
+                log('⏳ Waiting for connection...');
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                showStatus('initiatorStatus', `Error: ${error.message}`, 'error');
+            }
+        };
+
+        // RESPONDER: Accept offer
+        document.getElementById('btnAcceptOffer').onclick = async () => {
+            try {
+                const offerCodeStr = document.getElementById('offerInput').value.trim();
+                if (!offerCodeStr) {
+                    alert('Please paste the connection code!');
+                    return;
+                }
+
+                log('📡 Parsing connection code...');
+                const { peerId: remotePeerId, signal: offerSignal } = parseShareCode(offerCodeStr);
+
+                log(`📡 Creating responder peer (connecting to ${remotePeerId})...`);
+                peer = createResponder({
+                    peerId: 'tab-b-' + Date.now(),
+                    trickle: false  // Bundle all ICE candidates into answer
+                });
+
+                setupPeerHandlers();
+
+                log('📡 Setting up signal handler...');
+
+                // Set up promise to wait for the FIRST signal (the answer)
+                const answerSignalPromise = new Promise((resolve) => {
+                    peer.once('signal', (signal) => {
+                        log('📡 Answer signal received!');
+                        resolve(signal);
+                    });
+                });
+
+                // Start connection FIRST to initialize peer
+                log('📡 Starting connection...');
+                peer.connect().catch(() => {});
+
+                // Then signal with the offer to trigger answer generation
+                log('📡 Signaling with offer...');
+                peer.signal(offerSignal);
+
+                // Now wait for the answer signal
+                log('📡 Waiting for answer signal...');
+                const answerSignal = await answerSignalPromise;
+
+                log('📡 Generating answer code...');
+
+                // Generate answer code
+                const answerCode = generateShareCode(peer.id, answerSignal);
+                document.getElementById('answerCode').value = answerCode;
+
+                log(`✅ Answer code generated (${answerCode.length} chars)`);
+
+                document.getElementById('responderStep1').classList.add('hidden');
+                document.getElementById('responderStep2').classList.remove('hidden');
+
+                showStatus('responderStatus', '⏳ Waiting for connection...', 'waiting');
+
+            } catch (error) {
+                log(`❌ Error: ${error.message}`);
+                showStatus('responderStatus', `Error: ${error.message}`, 'error');
+            }
+        };
+
+        // Setup peer event handlers
+        function setupPeerHandlers() {
+            peer.on('connect', () => {
+                log('🎉 CONNECTED!');
+                document.getElementById('initiatorFlow').classList.add('hidden');
+                document.getElementById('responderFlow').classList.add('hidden');
+                document.getElementById('connected').classList.remove('hidden');
+                showStatus(isInitiator ? 'initiatorStatus' : 'responderStatus', '✅ Connected!', 'success');
+            });
+
+            peer.on('message', (msg) => {
+                log(`📨 Received: ${JSON.stringify(msg.payload)}`);
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message';
+                msgDiv.innerHTML = `<strong>Received:</strong> ${JSON.stringify(msg.payload)}`;
+                document.getElementById('messages').appendChild(msgDiv);
+            });
+
+            peer.on('error', (err) => {
+                if (!err.message.includes('timeout')) {
+                    log(`❌ Error: ${err.message}`);
+                }
+            });
+
+            peer.on('disconnect', () => {
+                log('❌ Disconnected');
+            });
+        }
+
+        // Send message
+        document.getElementById('btnSend').onclick = async () => {
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message || !peer) return;
+
+            try {
+                await peer.send({
+                    type: 'update',
+                    payload: message,
+                    timestamp: Date.now(),
+                    sender: peer.id,
+                });
+                log(`📤 Sent: ${message}`);
+                const msgDiv = document.createElement('div');
+                msgDiv.className = 'message';
+                msgDiv.innerHTML = `<strong>Sent:</strong> ${message}`;
+                document.getElementById('messages').appendChild(msgDiv);
+                input.value = '';
+            } catch (error) {
+                log(`❌ Send error: ${error.message}`);
+            }
+        };
+
+        // Enter to send
+        document.getElementById('messageInput').onkeypress = (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('btnSend').click();
+            }
+        };
+
+        // Copy buttons with logging (with iOS fallback)
+        document.getElementById('btnCopyOffer').onclick = () => {
+            const textarea = document.getElementById('offerCode');
+            const code = textarea.value;
+
+            // Try clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(() => {
+                    log(`📋 Copied offer code (${code.length} chars) to clipboard`);
+                    alert('Offer code copied! Now paste it in Tab B');
+                }).catch(() => {
+                    // Fallback: select the text
+                    textarea.select();
+                    log(`📋 Text selected - use your device's copy function`);
+                    alert('Text selected! Use your device to copy it (usually long-press and select Copy)');
+                });
+            } else {
+                // Fallback: select the text
+                textarea.select();
+                log(`📋 Text selected - use your device's copy function`);
+                alert('Text selected! Use your device to copy it (usually long-press and select Copy)');
+            }
+        };
+
+        document.getElementById('btnCopyAnswer').onclick = () => {
+            const textarea = document.getElementById('answerCode');
+            const code = textarea.value;
+
+            // Try clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(code).then(() => {
+                    log(`📋 Copied answer code (${code.length} chars) to clipboard`);
+                    alert('Answer code copied! Now paste it back in Tab A');
+                }).catch(() => {
+                    // Fallback: select the text
+                    textarea.select();
+                    log(`📋 Text selected - use your device's copy function`);
+                    alert('Text selected! Use your device to copy it (usually long-press and select Copy)');
+                });
+            } else {
+                // Fallback: select the text
+                textarea.select();
+                log(`📋 Text selected - use your device's copy function`);
+                alert('Text selected! Use your device to copy it (usually long-press and select Copy)');
+            }
+        };
+
+        // Paste detection
+        document.getElementById('offerInput').onpaste = (e) => {
+            setTimeout(() => {
+                const pastedLength = e.target.value.length;
+                if (pastedLength > 0) {
+                    log(`📥 Pasted offer code in Tab B (${pastedLength} chars)`);
+                }
+            }, 10);
+        };
+
+        document.getElementById('answerInput').onpaste = (e) => {
+            setTimeout(() => {
+                const pastedLength = e.target.value.length;
+                if (pastedLength > 0) {
+                    log(`📥 Pasted answer code in Tab A (${pastedLength} chars)`);
+                }
+            }, 10);
+        };
+    </script>
+</body>
+</html>

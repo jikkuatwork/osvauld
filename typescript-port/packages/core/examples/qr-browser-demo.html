@@ -1,0 +1,443 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC QR Code Demo</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+        }
+        .container {
+            border: 1px solid #ccc;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+        button {
+            background: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 5px;
+        }
+        button:hover {
+            background: #0056b3;
+        }
+        button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+        }
+        .qr-code {
+            margin: 20px 0;
+            text-align: center;
+        }
+        .qr-code img {
+            border: 2px solid #007bff;
+            border-radius: 8px;
+            max-width: 400px;
+        }
+        .share-code {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 4px;
+            margin: 10px 0;
+            word-break: break-all;
+            font-family: monospace;
+            font-size: 12px;
+            user-select: all;
+            -webkit-user-select: all;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .share-code:hover {
+            border-color: #007bff;
+            background: #e9ecef;
+        }
+        .status {
+            padding: 10px;
+            border-radius: 4px;
+            margin: 10px 0;
+        }
+        .status.connecting {
+            background: #fff3cd;
+            color: #856404;
+        }
+        .status.connected {
+            background: #d4edda;
+            color: #155724;
+        }
+        .status.error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        input, textarea {
+            width: 100%;
+            padding: 10px;
+            margin: 10px 0;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace;
+            font-size: 12px;
+        }
+        textarea {
+            min-height: 100px;
+        }
+        h3 {
+            color: #007bff;
+        }
+    </style>
+</head>
+<body>
+    <h1>🔗 WebRTC P2P Connection Demo</h1>
+    <p>Establish a peer-to-peer connection using QR codes</p>
+
+    <!-- Initiator (Machine A) -->
+    <div class="container">
+        <h3>📱 Machine A - Create Connection</h3>
+        <button id="createOffer">1. Create Connection Offer</button>
+
+        <div id="offerStatus"></div>
+
+        <div id="qrContainer" style="display:none;">
+            <div class="qr-code">
+                <h4>Scan this QR Code with Machine B:</h4>
+                <img id="qrImage" alt="QR Code">
+            </div>
+
+            <details>
+                <summary>Or copy share code manually</summary>
+                <p style="font-size: 12px; color: #666; margin: 5px 0;">
+                    Tap the code below to select it, then copy
+                </p>
+                <div class="share-code" id="shareCode" onclick="window.getSelection().selectAllChildren(this)"></div>
+                <button onclick="copyToClipboard('shareCode')">📋 Copy Code</button>
+            </details>
+        </div>
+
+        <div id="answerContainer" style="display:none;">
+            <h4>2. Paste Answer from Machine B:</h4>
+            <textarea id="answerInput" placeholder="Paste the answer code from Machine B here..."></textarea>
+            <button id="submitAnswer">Complete Connection</button>
+        </div>
+    </div>
+
+    <!-- Responder (Machine B) -->
+    <div class="container">
+        <h3>📲 Machine B - Join Connection</h3>
+
+        <h4>1. Paste Share Code from Machine A:</h4>
+        <textarea id="offerInput" placeholder="Paste the share code from Machine A here..."></textarea>
+        <button id="acceptOffer">Accept Connection</button>
+
+        <div id="responseStatus"></div>
+
+        <div id="answerQrContainer" style="display:none;">
+            <div class="qr-code">
+                <h4>Send this back to Machine A:</h4>
+                <img id="answerQrImage" alt="Answer QR Code">
+            </div>
+
+            <details open>
+                <summary>Or copy answer code manually</summary>
+                <p style="font-size: 12px; color: #666; margin: 5px 0;">
+                    Tap the code below to select it, then copy
+                </p>
+                <div class="share-code" id="answerCode" onclick="window.getSelection().selectAllChildren(this)"></div>
+                <button onclick="copyToClipboard('answerCode')">📋 Copy Answer</button>
+            </details>
+        </div>
+    </div>
+
+    <!-- Connection Status -->
+    <div class="container">
+        <h3>📊 Connection Status</h3>
+        <div id="connectionStatus">Not connected</div>
+
+        <div id="messaging" style="display:none;">
+            <h4>Send Message:</h4>
+            <input type="text" id="messageInput" placeholder="Type a message...">
+            <button id="sendMessage">Send</button>
+
+            <h4>Messages:</h4>
+            <div id="messages" style="background: #f8f9fa; padding: 10px; border-radius: 4px; min-height: 100px;"></div>
+        </div>
+    </div>
+
+    <!-- Load the Osvauld library (includes polyfills) -->
+    <script type="module">
+        import { createInitiator, createResponder, createConnectionOffer, parseShareCode, generateShareCode, generateQRCode } from './bundle.js';
+
+        // Version identifier
+        const VERSION = 'v1.0 - Trickle ICE disabled + iOS copy fix';
+        console.log(`%c🔗 WebRTC P2P Demo ${VERSION}`, 'color: #007bff; font-weight: bold; font-size: 14px;');
+        console.log('%cℹ️ Connection timeouts during handshake are normal', 'color: #666; font-style: italic;');
+        console.log('%c📊 Watch this console for detailed connection progress!', 'color: #666; font-style: italic;');
+
+        let initiatorPeer = null;
+        let responderPeer = null;
+        let currentPeer = null;
+
+        // Helper: Copy to clipboard (iOS-compatible)
+        window.copyToClipboard = (elementId) => {
+            const element = document.getElementById(elementId);
+            const text = element.textContent;
+
+            // Try clipboard API first
+            if (navigator.clipboard && navigator.clipboard.writeText) {
+                navigator.clipboard.writeText(text).then(() => {
+                    console.log('📋 Copied to clipboard!');
+                    alert('Copied to clipboard!');
+                }).catch(() => {
+                    // iOS fallback: create temporary textarea
+                    fallbackCopyTextToClipboard(text);
+                });
+            } else {
+                // iOS fallback: create temporary textarea
+                fallbackCopyTextToClipboard(text);
+            }
+        };
+
+        // Fallback copy function for iOS
+        function fallbackCopyTextToClipboard(text) {
+            const textArea = document.createElement('textarea');
+            textArea.value = text;
+            textArea.style.position = 'fixed';
+            textArea.style.top = '0';
+            textArea.style.left = '0';
+            textArea.style.width = '2em';
+            textArea.style.height = '2em';
+            textArea.style.padding = '0';
+            textArea.style.border = 'none';
+            textArea.style.outline = 'none';
+            textArea.style.boxShadow = 'none';
+            textArea.style.background = 'transparent';
+            document.body.appendChild(textArea);
+            textArea.focus();
+            textArea.select();
+
+            try {
+                const successful = document.execCommand('copy');
+                if (successful) {
+                    console.log('📋 Copied using fallback method!');
+                    alert('Copied! Now paste it in the other device.');
+                } else {
+                    console.log('📋 Please manually copy the text');
+                    alert('Please manually select and copy the code above.');
+                }
+            } catch (err) {
+                console.error('Failed to copy:', err);
+                alert('Please manually select and copy the code above.');
+            }
+
+            document.body.removeChild(textArea);
+        }
+
+        // Helper: Show status
+        function showStatus(elementId, message, type) {
+            const el = document.getElementById(elementId);
+            el.innerHTML = `<div class="status ${type}">${message}</div>`;
+        }
+
+        // Machine A: Create Offer
+        document.getElementById('createOffer').addEventListener('click', async () => {
+            try {
+                console.log('%c📡 [Initiator] Creating connection offer...', 'color: #007bff;');
+                showStatus('offerStatus', 'Creating connection...', 'connecting');
+
+                // Create initiator peer
+                initiatorPeer = createInitiator({
+                    peerId: 'machine-a-' + Date.now(),
+                    trickle: false  // Bundle all ICE candidates into initial offer
+                });
+
+                currentPeer = initiatorPeer;
+                console.log(`%c📡 [Initiator] Peer ID: ${initiatorPeer.id}`, 'color: #007bff;');
+
+                // Wait for signal
+                initiatorPeer.on('signal', async (signal) => {
+                    console.log('%c📡 [Initiator] Signal event fired!', 'color: #007bff;');
+                    console.log('%c📡 [Initiator] Signal type:', signal.type, 'color: #007bff;');
+
+                    try {
+                        console.log('%c📡 [Initiator] Creating share code...', 'color: #007bff;');
+
+                        // Generate share code and QR code
+                        const { shareCode, qrCode } = await createConnectionOffer(
+                            initiatorPeer.id,
+                            signal
+                        );
+
+                        console.log('%c📡 [Initiator] ✅ Share code created! Length:', shareCode.length, 'color: #28a745;');
+                        console.log('%c📡 [Initiator] ✅ QR code generated!', 'color: #28a745;');
+
+                        // Display QR code
+                        document.getElementById('qrImage').src = qrCode;
+                        document.getElementById('shareCode').textContent = shareCode;
+                        document.getElementById('qrContainer').style.display = 'block';
+                        document.getElementById('answerContainer').style.display = 'block';
+
+                        console.log('%c📡 [Initiator] ✅ UI updated with QR code', 'color: #28a745;');
+                        showStatus('offerStatus', '✅ QR Code generated! Share with Machine B', 'connected');
+                    } catch (error) {
+                        console.error('%c❌ [Initiator] Error creating QR code:', error, 'color: #dc3545;');
+                        showStatus('offerStatus', '❌ Error: ' + error.message, 'error');
+                    }
+                });
+
+                // Setup connection handlers
+                setupPeerHandlers(initiatorPeer);
+
+                // Start connection
+                console.log('%c📡 [Initiator] Calling connect()...', 'color: #007bff;');
+                await initiatorPeer.connect().catch((err) => {
+                    console.log('%c⏱️ [Initiator] Connect timeout (expected, waiting for answer)', 'color: #999;');
+                });
+                console.log('%c📡 [Initiator] Connect() finished (now waiting for signals...)', 'color: #007bff;');
+
+            } catch (error) {
+                showStatus('offerStatus', '❌ Error: ' + error.message, 'error');
+            }
+        });
+
+        // Machine A: Submit Answer
+        document.getElementById('submitAnswer').addEventListener('click', () => {
+            try {
+                const answerCode = document.getElementById('answerInput').value.trim();
+                if (!answerCode) {
+                    alert('Please paste the answer code from Machine B');
+                    return;
+                }
+
+                const { signal } = parseShareCode(answerCode);
+                initiatorPeer.signal(signal);
+
+                showStatus('offerStatus', '⏳ Completing connection...', 'connecting');
+            } catch (error) {
+                showStatus('offerStatus', '❌ Error: ' + error.message, 'error');
+            }
+        });
+
+        // Machine B: Accept Offer
+        document.getElementById('acceptOffer').addEventListener('click', async () => {
+            try {
+                const offerCode = document.getElementById('offerInput').value.trim();
+                if (!offerCode) {
+                    alert('Please paste the share code from Machine A');
+                    return;
+                }
+
+                showStatus('responseStatus', 'Accepting connection...', 'connecting');
+
+                // Parse offer
+                const { peerId: remotePeerId, signal: remoteSignal } = parseShareCode(offerCode);
+
+                // Create responder peer
+                responderPeer = createResponder({
+                    peerId: 'machine-b-' + Date.now(),
+                    trickle: false  // Bundle all ICE candidates into answer
+                });
+
+                currentPeer = responderPeer;
+
+                // Wait for answer signal
+                responderPeer.on('signal', async (signal) => {
+                    try {
+                        // Generate answer share code and QR
+                        const answerShareCode = generateShareCode(responderPeer.id, signal);
+                        const answerQrCode = await generateQRCode(answerShareCode);
+
+                        // Display answer QR code
+                        document.getElementById('answerQrImage').src = answerQrCode;
+                        document.getElementById('answerCode').textContent = answerShareCode;
+                        document.getElementById('answerQrContainer').style.display = 'block';
+
+                        showStatus('responseStatus', '✅ Answer generated! Send back to Machine A', 'connected');
+                    } catch (error) {
+                        showStatus('responseStatus', '❌ Error: ' + error.message, 'error');
+                    }
+                });
+
+                // Setup connection handlers
+                setupPeerHandlers(responderPeer);
+
+                // Start connection first
+                const connectPromise = responderPeer.connect().catch(() => {
+                    // May timeout - this is expected
+                });
+
+                // Then signal with remote offer (after connection starts)
+                await new Promise(resolve => setTimeout(resolve, 100)); // Small delay
+                responderPeer.signal(remoteSignal);
+
+                await connectPromise;
+
+            } catch (error) {
+                showStatus('responseStatus', '❌ Error: ' + error.message, 'error');
+            }
+        });
+
+        // Setup peer event handlers
+        function setupPeerHandlers(peer) {
+            peer.on('connect', () => {
+                console.log(`%c🎉 [${peer.id}] CONNECTED! P2P connection established.`, 'color: #28a745; font-weight: bold;');
+                document.getElementById('connectionStatus').innerHTML =
+                    '<div class="status connected">✅ Connected! You can now send messages.</div>';
+                document.getElementById('messaging').style.display = 'block';
+            });
+
+            peer.on('message', (message) => {
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML += `<div><strong>Received:</strong> ${JSON.stringify(message.payload)}</div>`;
+            });
+
+            peer.on('disconnect', () => {
+                document.getElementById('connectionStatus').innerHTML =
+                    '<div class="status error">❌ Disconnected</div>';
+            });
+
+            peer.on('error', (error) => {
+                // Ignore connection timeout errors during handshake (they're expected)
+                if (error.message && error.message.includes('Connection timeout')) {
+                    console.log('%c⏱️ Connection timeout (expected during handshake)', 'color: #999;');
+                } else {
+                    console.error('Peer error:', error);
+                }
+            });
+        }
+
+        // Send message
+        document.getElementById('sendMessage').addEventListener('click', async () => {
+            if (!currentPeer || !currentPeer.isConnected()) {
+                alert('Not connected!');
+                return;
+            }
+
+            const input = document.getElementById('messageInput');
+            const message = input.value.trim();
+            if (!message) return;
+
+            try {
+                await currentPeer.send({
+                    type: 'update',
+                    payload: message,
+                    timestamp: Date.now(),
+                    sender: currentPeer.id,
+                });
+
+                const messagesDiv = document.getElementById('messages');
+                messagesDiv.innerHTML += `<div><strong>Sent:</strong> ${message}</div>`;
+                input.value = '';
+            } catch (error) {
+                alert('Failed to send: ' + error.message);
+            }
+        });
+    </script>
+</body>
+</html>

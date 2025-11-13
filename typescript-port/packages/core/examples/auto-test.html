@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>WebRTC Auto-Test</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            max-width: 1000px;
+            margin: 50px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 {
+            color: #4ec9b0;
+        }
+        .console {
+            background: #252526;
+            border: 1px solid #3e3e42;
+            border-radius: 4px;
+            padding: 20px;
+            min-height: 400px;
+            max-height: 600px;
+            overflow-y: auto;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+        .log {
+            margin: 4px 0;
+            padding: 2px 0;
+        }
+        .log.info { color: #4fc1ff; }
+        .log.success { color: #4ec9b0; font-weight: bold; }
+        .log.error { color: #f48771; }
+        .log.warn { color: #dcdcaa; }
+        .log.debug { color: #858585; }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 16px;
+            margin: 10px 5px;
+        }
+        button:hover {
+            background: #1177bb;
+        }
+        button:disabled {
+            background: #3e3e42;
+            cursor: not-allowed;
+        }
+        .status {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 3px;
+            margin-left: 10px;
+            font-size: 12px;
+        }
+        .status.pending { background: #3e3e42; }
+        .status.running { background: #1a7f64; }
+        .status.success { background: #14532d; color: #4ade80; }
+        .status.failed { background: #7f1d1d; color: #fca5a5; }
+    </style>
+</head>
+<body>
+    <h1>🔬 WebRTC Automated Connection Test</h1>
+    <p>This test automatically connects two WebRTC peers on the same page.</p>
+
+    <div>
+        <button id="runTest">🚀 Run Test</button>
+        <button id="clearLog">🗑️ Clear Log</button>
+        <span id="status" class="status pending">Ready</span>
+    </div>
+
+    <div class="console" id="console"></div>
+
+    <script type="module">
+        import { createInitiator, createResponder } from './bundle.js';
+
+        const consoleEl = document.getElementById('console');
+        const statusEl = document.getElementById('status');
+
+        function log(message, type = 'info') {
+            const time = new Date().toLocaleTimeString();
+            const div = document.createElement('div');
+            div.className = `log ${type}`;
+            div.textContent = `[${time}] ${message}`;
+            consoleEl.appendChild(div);
+            consoleEl.scrollTop = consoleEl.scrollHeight;
+            console.log(message);
+        }
+
+        function setStatus(text, state) {
+            statusEl.textContent = text;
+            statusEl.className = `status ${state}`;
+        }
+
+        async function runTest() {
+            log('═══════════════════════════════════════════', 'debug');
+            log('🔬 STARTING WEBRTC CONNECTION TEST', 'success');
+            log('═══════════════════════════════════════════', 'debug');
+            setStatus('Running...', 'running');
+
+            try {
+                // Step 1: Create peers
+                log('');
+                log('📡 Step 1: Creating WebRTC peers...', 'info');
+
+                const peer1 = createInitiator({ peerId: 'test-peer-1' });
+                log(`✓ Created Initiator: ${peer1.id}`, 'success');
+
+                const peer2 = createResponder({ peerId: 'test-peer-2' });
+                log(`✓ Created Responder: ${peer2.id}`, 'success');
+
+                // Step 2: Set up signal exchange
+                log('');
+                log('📡 Step 2: Setting up signal exchange...', 'info');
+
+                let peer1Signals = [];
+                let peer2Signals = [];
+
+                peer1.on('signal', (signal) => {
+                    log(`→ Peer1 signal [${signal.type || 'ice'}]: ${JSON.stringify(signal).substring(0, 60)}...`, 'debug');
+                    peer1Signals.push(signal);
+                    // Forward to peer2
+                    setTimeout(() => {
+                        peer2.signal(signal);
+                        log(`← Peer2 received signal from Peer1`, 'debug');
+                    }, 10);
+                });
+
+                peer2.on('signal', (signal) => {
+                    log(`→ Peer2 signal [${signal.type || 'ice'}]: ${JSON.stringify(signal).substring(0, 60)}...`, 'debug');
+                    peer2Signals.push(signal);
+                    // Forward to peer1
+                    setTimeout(() => {
+                        peer1.signal(signal);
+                        log(`← Peer1 received signal from Peer2`, 'debug');
+                    }, 10);
+                });
+
+                // Step 3: Set up connection handlers
+                log('');
+                log('📡 Step 3: Setting up connection handlers...', 'info');
+
+                const peer1Connected = new Promise((resolve, reject) => {
+                    peer1.on('connect', () => {
+                        log('✓ Peer1 CONNECTED!', 'success');
+                        resolve();
+                    });
+                    peer1.on('error', (err) => {
+                        if (!err.message.includes('timeout')) {
+                            log(`✗ Peer1 error: ${err.message}`, 'error');
+                            reject(err);
+                        }
+                    });
+                });
+
+                const peer2Connected = new Promise((resolve, reject) => {
+                    peer2.on('connect', () => {
+                        log('✓ Peer2 CONNECTED!', 'success');
+                        resolve();
+                    });
+                    peer2.on('error', (err) => {
+                        if (!err.message.includes('timeout')) {
+                            log(`✗ Peer2 error: ${err.message}`, 'error');
+                            reject(err);
+                        }
+                    });
+                });
+
+                // Step 4: Start connection
+                log('');
+                log('📡 Step 4: Initiating connection...', 'info');
+                log('⏳ Calling connect() on both peers...', 'info');
+
+                // Start both connections
+                const connect1 = peer1.connect().catch((err) => {
+                    log(`⚠ Peer1 connect timeout: ${err.message} (expected)`, 'warn');
+                });
+
+                const connect2 = peer2.connect().catch((err) => {
+                    log(`⚠ Peer2 connect timeout: ${err.message} (expected)`, 'warn');
+                });
+
+                // Wait for actual connections (not the connect() promises)
+                log('⏳ Waiting for WebRTC handshake...', 'info');
+
+                // Give it 30 seconds to connect
+                const timeout = new Promise((_, reject) => {
+                    setTimeout(() => reject(new Error('Connection timeout after 30s')), 30000);
+                });
+
+                await Promise.race([
+                    Promise.all([peer1Connected, peer2Connected]),
+                    timeout
+                ]);
+
+                // Step 5: Test messaging
+                log('');
+                log('📡 Step 5: Testing message exchange...', 'info');
+
+                const messageReceived = new Promise((resolve) => {
+                    peer2.on('message', (msg) => {
+                        log(`✓ Peer2 received: ${JSON.stringify(msg.payload)}`, 'success');
+                        resolve();
+                    });
+                });
+
+                await peer1.send({
+                    type: 'update',
+                    payload: { test: 'Hello from Peer1!' },
+                    timestamp: Date.now(),
+                    sender: peer1.id,
+                });
+                log(`→ Peer1 sent test message`, 'info');
+
+                await messageReceived;
+
+                // Step 6: Get stats
+                log('');
+                log('📡 Step 6: Connection statistics...', 'info');
+                const stats1 = peer1.getStats();
+                const stats2 = peer2.getStats();
+                log(`Peer1 stats: sent=${stats1.messagesSent}, received=${stats1.messagesReceived}, latency=${stats1.latency}ms`, 'info');
+                log(`Peer2 stats: sent=${stats2.messagesSent}, received=${stats2.messagesReceived}, latency=${stats2.latency}ms`, 'info');
+
+                // Success!
+                log('');
+                log('═══════════════════════════════════════════', 'debug');
+                log('✅ TEST PASSED! WebRTC connection working!', 'success');
+                log('═══════════════════════════════════════════', 'debug');
+                setStatus('Test Passed ✅', 'success');
+
+                // Cleanup
+                setTimeout(() => {
+                    peer1.disconnect();
+                    peer2.disconnect();
+                    log('🧹 Cleaned up connections', 'debug');
+                }, 1000);
+
+            } catch (error) {
+                log('');
+                log('═══════════════════════════════════════════', 'debug');
+                log(`✗ TEST FAILED: ${error.message}`, 'error');
+                log('═══════════════════════════════════════════', 'debug');
+                console.error('Test error:', error);
+                setStatus('Test Failed ✗', 'failed');
+            }
+        }
+
+        document.getElementById('runTest').addEventListener('click', () => {
+            document.getElementById('runTest').disabled = true;
+            runTest().finally(() => {
+                document.getElementById('runTest').disabled = false;
+            });
+        });
+
+        document.getElementById('clearLog').addEventListener('click', () => {
+            consoleEl.innerHTML = '';
+            setStatus('Ready', 'pending');
+        });
+
+        // Version info
+        log('🔗 WebRTC Auto-Test v1.0', 'info');
+        log('Ready to test. Click "Run Test" to start.', 'info');
+    </script>
+</body>
+</html>

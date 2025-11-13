@@ -6,4 +6,6 @@
 
 export * from './interface';
 export * from './mock-peer';
+export * from './webrtc-peer';
+export * from './signaling';
 export * from './sync';
