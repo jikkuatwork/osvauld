@@ -1,0 +1,1371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#007AFF">
+    <link rel="manifest" href="manifest.json">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ctext y='75' font-size='75'%3E💬%3C/text%3E%3C/svg%3E">
+    <title>Osvauld Chat</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        :root {
+            --primary: #007AFF;
+            --primary-dark: #0051D5;
+            --success: #34C759;
+            --danger: #FF3B30;
+            --warning: #FF9500;
+            --bg: #000000;
+            --surface: #1C1C1E;
+            --surface-elevated: #2C2C2E;
+            --text-primary: #FFFFFF;
+            --text-secondary: #8E8E93;
+            --border: #38383A;
+            --message-sent: #007AFF;
+            --message-received: #2C2C2E;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, sans-serif;
+            background: var(--bg);
+            color: var(--text-primary);
+            height: 100vh;
+            overflow: hidden;
+            display: flex;
+            flex-direction: column;
+        }
+
+        /* Header */
+        .header {
+            background: var(--surface);
+            border-bottom: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            flex-shrink: 0;
+        }
+
+        .header-title {
+            font-size: 17px;
+            font-weight: 600;
+            letter-spacing: -0.4px;
+        }
+
+        .status-indicator {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            background: var(--text-secondary);
+            margin-right: 8px;
+            transition: background 0.3s ease;
+        }
+
+        .status-indicator.connected {
+            background: var(--success);
+            box-shadow: 0 0 8px var(--success);
+        }
+
+        .status-indicator.connecting {
+            background: var(--warning);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .header-left, .header-right {
+            display: flex;
+            align-items: center;
+        }
+
+        .btn-icon {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 16px;
+            padding: 8px;
+            cursor: pointer;
+            border-radius: 8px;
+            transition: background 0.2s;
+        }
+
+        .btn-icon:active {
+            background: var(--surface-elevated);
+        }
+
+        /* Chat Area */
+        .chat-container {
+            flex: 1;
+            overflow-y: auto;
+            padding: 16px;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+
+        .message {
+            max-width: 75%;
+            padding: 12px 16px;
+            border-radius: 18px;
+            font-size: 16px;
+            line-height: 1.4;
+            word-wrap: break-word;
+            animation: messageIn 0.3s ease;
+        }
+
+        @keyframes messageIn {
+            from {
+                opacity: 0;
+                transform: translateY(10px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .message.sent {
+            background: var(--message-sent);
+            color: white;
+            align-self: flex-end;
+            border-bottom-right-radius: 4px;
+        }
+
+        .message.received {
+            background: var(--message-received);
+            color: var(--text-primary);
+            align-self: flex-start;
+            border-bottom-left-radius: 4px;
+        }
+
+        .message-meta {
+            font-size: 11px;
+            opacity: 0.7;
+            margin-top: 4px;
+        }
+
+        .system-message {
+            text-align: center;
+            color: var(--text-secondary);
+            font-size: 13px;
+            padding: 8px;
+            margin: 8px 0;
+        }
+
+        .empty-state {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            text-align: center;
+            padding: 32px;
+            color: var(--text-secondary);
+        }
+
+        .empty-state-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+            opacity: 0.5;
+        }
+
+        .empty-state-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--text-primary);
+        }
+
+        .empty-state-subtitle {
+            font-size: 15px;
+            line-height: 1.4;
+        }
+
+        /* Input Area */
+        .input-container {
+            background: var(--surface);
+            border-top: 1px solid var(--border);
+            padding: 12px 16px;
+            display: flex;
+            gap: 12px;
+            align-items: flex-end;
+            flex-shrink: 0;
+        }
+
+        .input-wrapper {
+            flex: 1;
+            background: var(--surface-elevated);
+            border-radius: 20px;
+            display: flex;
+            align-items: center;
+            padding: 8px 16px;
+            border: 1px solid var(--border);
+            transition: border-color 0.2s;
+        }
+
+        .input-wrapper:focus-within {
+            border-color: var(--primary);
+        }
+
+        .message-input {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-primary);
+            font-size: 16px;
+            outline: none;
+            resize: none;
+            max-height: 100px;
+            font-family: inherit;
+        }
+
+        .message-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .btn-send {
+            background: var(--primary);
+            border: none;
+            color: white;
+            width: 36px;
+            height: 36px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex-shrink: 0;
+        }
+
+        .btn-send:active {
+            transform: scale(0.95);
+            background: var(--primary-dark);
+        }
+
+        .btn-send:disabled {
+            background: var(--text-secondary);
+            cursor: not-allowed;
+        }
+
+        /* Connection Modal */
+        .modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            padding: 16px;
+            opacity: 0;
+            pointer-events: none;
+            transition: opacity 0.3s ease;
+        }
+
+        .modal.active {
+            opacity: 1;
+            pointer-events: all;
+        }
+
+        .modal-content {
+            background: var(--surface);
+            border-radius: 16px;
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            transform: scale(0.9);
+            transition: transform 0.3s ease;
+        }
+
+        .modal.active .modal-content {
+            transform: scale(1);
+        }
+
+        .modal-header {
+            padding: 20px;
+            border-bottom: 1px solid var(--border);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+        }
+
+        .modal-body {
+            padding: 20px;
+        }
+
+        .connection-tabs {
+            display: flex;
+            gap: 8px;
+            margin-bottom: 20px;
+            background: var(--surface-elevated);
+            padding: 4px;
+            border-radius: 10px;
+        }
+
+        .tab-btn {
+            flex: 1;
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 15px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+
+        .tab-btn.active {
+            background: var(--primary);
+            color: white;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .qr-code {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .qr-code img {
+            max-width: 280px;
+            width: 100%;
+            border-radius: 12px;
+            border: 1px solid var(--border);
+        }
+
+        .code-box {
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 16px;
+            margin: 16px 0;
+            font-family: 'SF Mono', Monaco, monospace;
+            font-size: 12px;
+            line-height: 1.6;
+            color: var(--text-secondary);
+            word-break: break-all;
+            user-select: all;
+            -webkit-user-select: all;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+
+        .code-box:active {
+            border-color: var(--primary);
+        }
+
+        .code-header {
+            color: var(--primary);
+            font-weight: 600;
+            margin-bottom: 8px;
+        }
+
+        .code-meta {
+            color: var(--text-secondary);
+            font-size: 11px;
+            margin-bottom: 8px;
+        }
+
+        .code-data {
+            color: var(--text-primary);
+            word-break: break-all;
+        }
+
+        .btn-primary {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+        }
+
+        .btn-primary:active {
+            transform: scale(0.98);
+            background: var(--primary-dark);
+        }
+
+        .btn-secondary {
+            background: var(--surface-elevated);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            padding: 14px;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            width: 100%;
+            cursor: pointer;
+            transition: all 0.2s;
+            margin-top: 12px;
+        }
+
+        .btn-secondary:active {
+            background: var(--border);
+        }
+
+        .input-group {
+            margin: 16px 0;
+        }
+
+        .input-label {
+            font-size: 13px;
+            font-weight: 600;
+            color: var(--text-secondary);
+            margin-bottom: 8px;
+            display: block;
+        }
+
+        .input-field {
+            width: 100%;
+            background: var(--surface-elevated);
+            border: 1px solid var(--border);
+            color: var(--text-primary);
+            padding: 12px 16px;
+            border-radius: 12px;
+            font-size: 15px;
+            outline: none;
+            transition: border-color 0.2s;
+            font-family: inherit;
+            resize: vertical;
+            min-height: 100px;
+        }
+
+        .input-field:focus {
+            border-color: var(--primary);
+        }
+
+        .help-text {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin-top: 8px;
+            line-height: 1.4;
+        }
+
+        .step-indicator {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 12px;
+            background: var(--surface-elevated);
+            border-radius: 12px;
+            margin-bottom: 16px;
+        }
+
+        .step-number {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            background: var(--primary);
+            color: white;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 600;
+            flex-shrink: 0;
+        }
+
+        .step-text {
+            flex: 1;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .alert {
+            padding: 12px 16px;
+            border-radius: 12px;
+            margin: 16px 0;
+            font-size: 14px;
+            line-height: 1.4;
+        }
+
+        .alert.success {
+            background: rgba(52, 199, 89, 0.1);
+            border: 1px solid rgba(52, 199, 89, 0.3);
+            color: var(--success);
+        }
+
+        .alert.info {
+            background: rgba(0, 122, 255, 0.1);
+            border: 1px solid rgba(0, 122, 255, 0.3);
+            color: var(--primary);
+        }
+
+        .alert.warning {
+            background: rgba(255, 149, 0, 0.1);
+            border: 1px solid rgba(255, 149, 0, 0.3);
+            color: var(--warning);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 20px;
+            height: 20px;
+            border: 2px solid var(--border);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            .message {
+                max-width: 85%;
+            }
+        }
+
+        /* Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        ::-webkit-scrollbar-track {
+            background: var(--surface);
+        }
+
+        ::-webkit-scrollbar-thumb {
+            background: var(--border);
+            border-radius: 4px;
+        }
+
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--text-secondary);
+        }
+
+        .hidden {
+            display: none !important;
+        }
+    </style>
+</head>
+<body>
+    <!-- Header -->
+    <div class="header">
+        <div class="header-left">
+            <div class="status-indicator" id="statusIndicator"></div>
+            <div class="header-title">Osvauld Chat</div>
+        </div>
+        <div class="header-right">
+            <button class="btn-icon" id="btnConnect" title="Connect">🔗</button>
+        </div>
+    </div>
+
+    <!-- Chat Area -->
+    <div class="chat-container" id="chatContainer">
+        <div class="empty-state" id="emptyState">
+            <div class="empty-state-icon">💬</div>
+            <div class="empty-state-title">No Connection Yet</div>
+            <div class="empty-state-subtitle">
+                Tap the 🔗 button to connect with another device
+            </div>
+        </div>
+    </div>
+
+    <!-- Input Area -->
+    <div class="input-container">
+        <div class="input-wrapper">
+            <textarea
+                class="message-input"
+                id="messageInput"
+                placeholder="Message..."
+                rows="1"
+                disabled
+            ></textarea>
+        </div>
+        <button class="btn-send" id="btnSend" disabled>
+            <span>➤</span>
+        </button>
+    </div>
+
+    <!-- Connection Modal -->
+    <div class="modal" id="connectionModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <div class="modal-title">Connect</div>
+                <button class="btn-icon" id="btnCloseModal">✕</button>
+            </div>
+            <div class="modal-body">
+                <!-- Tabs -->
+                <div class="connection-tabs">
+                    <button class="tab-btn active" data-tab="create">Create</button>
+                    <button class="tab-btn" data-tab="join">Join</button>
+                </div>
+
+                <!-- IP Indicator (only shown on localhost) -->
+                <div id="ipIndicator" class="alert info hidden" style="margin-top: 12px; display: flex; justify-content: space-between; align-items: center;">
+                    <div>
+                        <strong>Network IP:</strong> <span id="ipDisplay"></span>
+                    </div>
+                    <button class="btn-icon" id="btnChangeIP" title="Change IP" style="margin: 0;">✏️</button>
+                </div>
+
+                <!-- Create Tab -->
+                <div class="tab-content active" id="tab-create">
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-text">Generate a connection code to share</div>
+                    </div>
+
+                    <button class="btn-primary" id="btnGenerateCode">
+                        Generate Connection Code
+                    </button>
+
+                    <div id="offerSection" class="hidden">
+                        <div class="alert info">
+                            Share this code or QR with the other device
+                        </div>
+
+                        <div class="qr-code">
+                            <img id="offerQR" alt="QR Code">
+                        </div>
+
+                        <div class="code-box" id="offerCodeBox" onclick="this.select()">
+                            <div class="code-header">═══ OSVAULD CHAT - OFFER ═══</div>
+                            <div class="code-meta" id="offerMeta"></div>
+                            <div class="code-data" id="offerCode"></div>
+                            <div class="code-header">═══ END OFFER ═══</div>
+                        </div>
+
+                        <button class="btn-secondary" id="btnCopyOffer">
+                            📋 Copy to Clipboard
+                        </button>
+
+                        <div class="step-indicator" style="margin-top: 24px;">
+                            <div class="step-number">2</div>
+                            <div class="step-text">Paste the answer code you receive</div>
+                        </div>
+
+                        <div class="input-group">
+                            <label class="input-label">Answer Code</label>
+                            <textarea
+                                class="input-field"
+                                id="answerInput"
+                                placeholder="Paste the answer code here..."
+                            ></textarea>
+                            <div class="help-text">
+                                Paste the code from the other device (including the header/footer)
+                            </div>
+                        </div>
+
+                        <button class="btn-primary" id="btnCompleteConnection">
+                            Complete Connection
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Join Tab -->
+                <div class="tab-content" id="tab-join">
+                    <div class="step-indicator">
+                        <div class="step-number">1</div>
+                        <div class="step-text">Paste the connection code you received</div>
+                    </div>
+
+                    <div class="input-group">
+                        <label class="input-label">Connection Code</label>
+                        <textarea
+                            class="input-field"
+                            id="offerInput"
+                            placeholder="Paste the offer code here..."
+                        ></textarea>
+                        <div class="help-text">
+                            Paste the code from the other device (including the header/footer)
+                        </div>
+                    </div>
+
+                    <button class="btn-primary" id="btnAcceptOffer">
+                        Accept & Generate Answer
+                    </button>
+
+                    <div id="answerSection" class="hidden">
+                        <div class="alert success">
+                            Send this answer code back to complete the connection
+                        </div>
+
+                        <div class="qr-code">
+                            <img id="answerQR" alt="Answer QR Code">
+                        </div>
+
+                        <div class="code-box" id="answerCodeBox" onclick="this.select()">
+                            <div class="code-header">═══ OSVAULD CHAT - ANSWER ═══</div>
+                            <div class="code-meta" id="answerMeta"></div>
+                            <div class="code-data" id="answerCode"></div>
+                            <div class="code-header">═══ END ANSWER ═══</div>
+                        </div>
+
+                        <button class="btn-secondary" id="btnCopyAnswer">
+                            📋 Copy to Clipboard
+                        </button>
+
+                        <div class="alert info" style="margin-top: 16px;">
+                            Waiting for connection... This may take up to 30 seconds.
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        import { createInitiator, createResponder } from './bundle.js';
+        import { generateShareCode, parseShareCode, generateQRCode } from './bundle.js';
+
+        const VERSION = 'v2.5 - Cross-device WORKING! 🎉';
+        console.log(`%c💬 Osvauld Chat ${VERSION}`, 'color: #007AFF; font-weight: bold; font-size: 16px;');
+        console.log('%c✅ Real WebRTC P2P across devices confirmed working!', 'color: #34C759;');
+
+        // State
+        let peer = null;
+        let isInitiator = false;
+        let deviceName = getDeviceName();
+        let localIP = localStorage.getItem('osvauld_local_ip') || '192.168.1.127'; // Default IP
+
+        // DOM Elements
+        const statusIndicator = document.getElementById('statusIndicator');
+        const chatContainer = document.getElementById('chatContainer');
+        const emptyState = document.getElementById('emptyState');
+        const messageInput = document.getElementById('messageInput');
+        const btnSend = document.getElementById('btnSend');
+        const btnConnect = document.getElementById('btnConnect');
+        const connectionModal = document.getElementById('connectionModal');
+        const btnCloseModal = document.getElementById('btnCloseModal');
+
+        // Get device name for metadata
+        function getDeviceName() {
+            const ua = navigator.userAgent;
+            if (/iPhone/.test(ua)) return 'iPhone';
+            if (/iPad/.test(ua)) return 'iPad';
+            if (/Android/.test(ua)) return 'Android';
+            if (/Mac/.test(ua)) return 'Mac';
+            if (/Windows/.test(ua)) return 'Windows';
+            return 'Device';
+        }
+
+        // Show IP indicator if on localhost
+        function updateIPIndicator() {
+            const ipIndicator = document.getElementById('ipIndicator');
+            const ipDisplay = document.getElementById('ipDisplay');
+
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                ipIndicator.classList.remove('hidden');
+                ipDisplay.textContent = localIP;
+            }
+        }
+
+        // Change IP button
+        document.getElementById('btnChangeIP').onclick = () => {
+            const newIP = prompt('Enter your local IP address:', localIP);
+            if (newIP && newIP.trim()) {
+                localIP = newIP.trim();
+                localStorage.setItem('osvauld_local_ip', localIP);
+                updateIPIndicator();
+                console.log(`✅ IP updated to: ${localIP}`);
+            }
+        };
+
+        // Check URL parameters on load
+        window.addEventListener('DOMContentLoaded', () => {
+            updateIPIndicator();
+
+            // Warn if accessing via localhost (won't generate local network candidates)
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.warn('⚠️ WARNING: You are accessing via localhost!');
+                console.warn('   WebRTC will NOT generate local network candidates.');
+                console.warn('   For cross-device connections, access via your IP instead:');
+                console.warn(`   → http://${localIP}:${window.location.port}/examples/chat.html`);
+
+                // Show visual warning
+                const warningDiv = document.createElement('div');
+                warningDiv.className = 'alert warning';
+                warningDiv.style.margin = '16px';
+                warningDiv.innerHTML = `
+                    <strong>⚠️ Localhost Detected!</strong><br>
+                    For cross-device connections, open this page at:<br>
+                    <code style="user-select: all; background: rgba(0,0,0,0.2); padding: 4px 8px; border-radius: 4px; display: inline-block; margin-top: 4px;">
+                        http://${localIP}:${window.location.port}/examples/chat.html
+                    </code>
+                `;
+                document.querySelector('.header').after(warningDiv);
+            }
+
+            const params = new URLSearchParams(window.location.search);
+            const offerCode = params.get('offer');
+            const answerCode = params.get('answer');
+
+            if (offerCode) {
+                console.log('📥 Auto-detected offer code in URL');
+                showModal();
+                switchTab('join');
+                document.getElementById('offerInput').value = offerCode;
+                // Auto-accept after a brief delay
+                setTimeout(() => {
+                    document.getElementById('btnAcceptOffer').click();
+                }, 500);
+            } else if (answerCode) {
+                console.log('📥 Auto-detected answer code in URL');
+                // This would be used by the initiator
+                // We'd need to handle this case
+            }
+        });
+
+        // Modal functions
+        function showModal() {
+            connectionModal.classList.add('active');
+        }
+
+        function hideModal() {
+            connectionModal.classList.remove('active');
+        }
+
+        btnConnect.onclick = showModal;
+        btnCloseModal.onclick = hideModal;
+
+        connectionModal.onclick = (e) => {
+            if (e.target === connectionModal) hideModal();
+        };
+
+        // Tab switching
+        document.querySelectorAll('.tab-btn').forEach(btn => {
+            btn.onclick = () => switchTab(btn.dataset.tab);
+        });
+
+        function switchTab(tab) {
+            document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+            document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+
+            document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+            document.getElementById(`tab-${tab}`).classList.add('active');
+        }
+
+        // Format share code with metadata
+        function formatShareCode(code, type) {
+            const timestamp = new Date().toLocaleString();
+            return `═══ OSVAULD CHAT - ${type.toUpperCase()} ═══\nFrom: ${deviceName}\nTime: ${timestamp}\n---\n${code}\n═══ END ${type.toUpperCase()} ═══`;
+        }
+
+        // Extract code from formatted text
+        function extractCode(text) {
+            // Try to find the code between markers
+            const match = text.match(/---\n([\s\S]+?)\n═══/);
+            if (match) {
+                return match[1].trim();
+            }
+            // Fallback: assume it's raw code
+            return text.trim();
+        }
+
+        // Generate full URL with query param (use IP for cross-device)
+        function generateConnectionURL(code, type) {
+            let origin = window.location.origin;
+
+            // If localhost, replace with actual IP for cross-device access
+            if (origin.includes('localhost') || origin.includes('127.0.0.1')) {
+                const port = window.location.port || '3456';
+                origin = `http://${localIP}:${port}`;
+            }
+
+            const baseURL = origin + window.location.pathname;
+            return `${baseURL}?${type}=${encodeURIComponent(code)}`;
+        }
+
+        // Log current IP being used
+        function logIPUsage() {
+            if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+                console.log(`📡 Using IP for QR codes: ${localIP}`);
+                console.log(`💡 Tip: Click the ✏️ button to change your IP if needed`);
+            }
+        }
+
+        // CREATE TAB: Generate offer
+        document.getElementById('btnGenerateCode').onclick = async () => {
+            try {
+                // Log IP being used for QR codes
+                logIPUsage();
+
+                console.log('📡 Creating initiator peer...');
+
+                peer = createInitiator({
+                    peerId: `${deviceName}-${Date.now()}`,
+                    trickle: false,
+                    connectionTimeout: 120000  // 2 minutes for manual signaling
+                });
+
+                setupPeerHandlers();
+
+                console.log('📡 Waiting for signal event...');
+                const offerSignalPromise = new Promise((resolve) => {
+                    peer.once('signal', (signal) => {
+                        console.log(`📡 Offer signal received (type: ${signal.type})`);
+                        resolve(signal);
+                    });
+                });
+
+                console.log('📡 Calling connect()...');
+                peer.connect().catch((err) => {
+                    console.log(`⏱️ Connect promise rejected: ${err.message} (expected)`);
+                });
+
+                const signal = await offerSignalPromise;
+                console.log('📡 Signal promise resolved');
+
+                console.log('📡 Generating share code...');
+                const shareCode = generateShareCode(peer.id, signal);
+                console.log(`   Share code length: ${shareCode.length}`);
+
+                console.log('📡 Generating connection URL...');
+                const connectionURL = generateConnectionURL(shareCode, 'offer');
+                console.log(`   URL: ${connectionURL.substring(0, 80)}...`);
+
+                console.log('📡 Generating QR code...');
+                const qrCode = await generateQRCode(connectionURL, {
+                    qrWidth: 400,
+                    errorCorrectionLevel: 'M'
+                });
+
+                document.getElementById('offerQR').src = qrCode;
+                document.getElementById('offerCode').textContent = shareCode;
+                document.getElementById('offerMeta').textContent = `From: ${deviceName} | Time: ${new Date().toLocaleString()}`;
+                document.getElementById('offerSection').classList.remove('hidden');
+
+                console.log('✅ Offer generated and displayed');
+                console.log(`   Peer state: ${peer.state}`);
+                console.log('   Waiting for answer... (timeout: 2 minutes)');
+                addSystemMessage('Connection code generated. Share it with the other device.');
+                statusIndicator.classList.add('connecting');
+                isInitiator = true;
+
+            } catch (error) {
+                console.error('❌ Error:', error);
+                alert('Failed to generate connection code: ' + error.message);
+            }
+        };
+
+        // CREATE TAB: Copy offer
+        document.getElementById('btnCopyOffer').onclick = () => {
+            const code = document.getElementById('offerCode').textContent;
+            const formatted = formatShareCode(code, 'offer');
+            copyToClipboard(formatted, 'Offer code copied! Share via Telegram or any messaging app.');
+        };
+
+        // CREATE TAB: Complete connection
+        document.getElementById('btnCompleteConnection').onclick = () => {
+            try {
+                console.log('📡 === COMPLETING CONNECTION ===');
+                console.log(`   Peer exists: ${!!peer}`);
+                console.log(`   Peer ID: ${peer ? peer.id : 'N/A'}`);
+                console.log(`   Peer state: ${peer ? peer.state : 'N/A'}`);
+
+                const answerText = document.getElementById('answerInput').value.trim();
+                if (!answerText) {
+                    alert('Please paste the answer code');
+                    return;
+                }
+
+                console.log(`   Answer text length: ${answerText.length}`);
+                const answerCode = extractCode(answerText);
+                console.log(`   Extracted code length: ${answerCode.length}`);
+
+                const { signal } = parseShareCode(answerCode);
+                console.log(`   Parsed signal type: ${signal.type}`);
+
+                console.log('📡 Calling peer.signal() with answer...');
+                peer.signal(signal);
+                console.log('✅ Answer signaled successfully');
+                addSystemMessage('Completing connection...');
+
+            } catch (error) {
+                console.error('❌ Error completing connection:', error);
+                console.error('   Error details:', error.stack);
+                alert('Failed to process answer: ' + error.message);
+            }
+        };
+
+        // JOIN TAB: Accept offer
+        document.getElementById('btnAcceptOffer').onclick = async () => {
+            try {
+                console.log('📡 === ACCEPTING OFFER ===');
+
+                const offerText = document.getElementById('offerInput').value.trim();
+                if (!offerText) {
+                    alert('Please paste the connection code');
+                    return;
+                }
+
+                console.log(`   Offer text length: ${offerText.length}`);
+                const offerCode = extractCode(offerText);
+                console.log(`   Extracted code length: ${offerCode.length}`);
+
+                const { peerId: remotePeerId, signal: offerSignal } = parseShareCode(offerCode);
+                console.log(`   Remote peer ID: ${remotePeerId}`);
+                console.log(`   Offer signal type: ${offerSignal.type}`);
+
+                console.log('📡 Creating responder peer...');
+                peer = createResponder({
+                    peerId: `${deviceName}-${Date.now()}`,
+                    trickle: false,
+                    connectionTimeout: 120000  // 2 minutes for manual signaling
+                });
+                console.log(`   Created peer: ${peer.id}`);
+
+                setupPeerHandlers();
+
+                console.log('📡 Waiting for answer signal...');
+                const answerSignalPromise = new Promise((resolve) => {
+                    peer.once('signal', (signal) => {
+                        console.log(`📡 Answer signal received (type: ${signal.type})`);
+                        resolve(signal);
+                    });
+                });
+
+                console.log('📡 Calling connect()...');
+                peer.connect().catch((err) => {
+                    console.log(`⏱️ Connect promise rejected: ${err.message} (expected)`);
+                });
+
+                console.log('📡 Signaling with offer...');
+                peer.signal(offerSignal);
+
+                const answerSignal = await answerSignalPromise;
+                console.log('📡 Answer signal promise resolved');
+
+                console.log('📡 Generating answer share code...');
+                const answerShareCode = generateShareCode(peer.id, answerSignal);
+                console.log(`   Answer code length: ${answerShareCode.length}`);
+
+                console.log('📡 Generating connection URL...');
+                const connectionURL = generateConnectionURL(answerShareCode, 'answer');
+                console.log(`   URL: ${connectionURL.substring(0, 80)}...`);
+
+                console.log('📡 Generating QR code...');
+                const answerQR = await generateQRCode(connectionURL, {
+                    qrWidth: 400,
+                    errorCorrectionLevel: 'M'
+                });
+
+                document.getElementById('answerQR').src = answerQR;
+                document.getElementById('answerCode').textContent = answerShareCode;
+                document.getElementById('answerMeta').textContent = `From: ${deviceName} | Time: ${new Date().toLocaleString()}`;
+                document.getElementById('answerSection').classList.remove('hidden');
+
+                console.log('✅ Answer generated and displayed');
+                console.log(`   Peer state: ${peer.state}`);
+                console.log('   Waiting for connection... (timeout: 2 minutes)');
+                addSystemMessage('Waiting for connection...');
+                statusIndicator.classList.add('connecting');
+                isInitiator = false;
+
+            } catch (error) {
+                console.error('❌ Error accepting offer:', error);
+                console.error('   Error details:', error.stack);
+                alert('Failed to accept connection: ' + error.message);
+            }
+        };
+
+        // JOIN TAB: Copy answer
+        document.getElementById('btnCopyAnswer').onclick = () => {
+            const code = document.getElementById('answerCode').textContent;
+            const formatted = formatShareCode(code, 'answer');
+            copyToClipboard(formatted, 'Answer code copied! Send it back to complete the connection.');
+        };
+
+        // Peer event handlers
+        function setupPeerHandlers() {
+            console.log(`📡 Setting up handlers for peer: ${peer.id}`);
+
+            peer.on('signal', (signal) => {
+                console.log(`📡 Signal event (type: ${signal.type || 'ice'})`);
+
+                // Log ICE candidates for debugging
+                if (signal.type === 'offer' || signal.type === 'answer') {
+                    const sdp = signal.sdp;
+                    const candidates = sdp.match(/a=candidate:.+/g) || [];
+                    console.log(`   📍 ICE candidates in signal: ${candidates.length}`);
+
+                    // Log ALL candidates to see IPs
+                    candidates.forEach((cand, i) => {
+                        // Extract IP from candidate
+                        const ipMatch = cand.match(/(\d+\.\d+\.\d+\.\d+)/);
+                        if (ipMatch) {
+                            const ip = ipMatch[1];
+                            let type = '';
+
+                            // Identify candidate type
+                            if (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.')) {
+                                type = '🏠 LOCAL';
+                            } else if (ip.startsWith('127.')) {
+                                type = '🔄 LOOPBACK';
+                            } else {
+                                type = '🌍 PUBLIC';
+                            }
+
+                            console.log(`   ${i + 1}. ${ip} ${type}`);
+                        }
+                    });
+
+                    // Warn if no local network candidates
+                    const hasLocal = candidates.some(c => {
+                        const ip = c.match(/(\d+\.\d+\.\d+\.\d+)/)?.[1];
+                        return ip && (ip.startsWith('192.168.') || ip.startsWith('10.') || ip.startsWith('172.'));
+                    });
+
+                    if (!hasLocal) {
+                        console.warn('   ⚠️ NO LOCAL NETWORK CANDIDATES FOUND!');
+                        console.warn('   This may cause connection issues on same WiFi');
+                    }
+                }
+            });
+
+            peer.on('connect', () => {
+                console.log('🎉 CONNECTED! P2P link established');
+                console.log(`   Peer ID: ${peer.id}`);
+                console.log(`   State: ${peer.state}`);
+                statusIndicator.classList.remove('connecting');
+                statusIndicator.classList.add('connected');
+                emptyState.classList.add('hidden');
+                messageInput.disabled = false;
+                btnSend.disabled = false;
+                addSystemMessage('Connected! You can now send messages.');
+                hideModal();
+            });
+
+            peer.on('message', (msg) => {
+                console.log('📨 Received message:', msg);
+                if (msg.payload) {
+                    addMessage(msg.payload, 'received');
+                }
+            });
+
+            peer.on('disconnect', () => {
+                console.log('⚠️ Disconnect event fired');
+                console.log(`   Peer state: ${peer ? peer.state : 'null'}`);
+
+                // Check if data channel is actually closed
+                if (peer && peer.peer && peer.peer._channel) {
+                    const channelState = peer.peer._channel.readyState;
+                    console.log(`   Data channel state: ${channelState}`);
+
+                    if (channelState === 'open') {
+                        console.log('   ✅ Data channel still OPEN - ignoring disconnect event');
+                        console.log('   This is likely an iOS background/interruption false alarm');
+                        return; // Don't update UI if data channel is still open
+                    }
+                }
+
+                console.log('❌ Confirmed disconnection');
+                statusIndicator.classList.remove('connected', 'connecting');
+                addSystemMessage('Disconnected');
+                messageInput.disabled = true;
+                btnSend.disabled = true;
+            });
+
+            peer.on('error', (err) => {
+                console.log(`⚠️ Peer error: ${err.message}`);
+                if (err.message.includes('timeout')) {
+                    console.log('   This is the connection timeout - NORMAL during manual signaling');
+                    console.log('   Peer is still active and waiting for answer');
+                } else {
+                    console.error('❌ Unexpected error:', err);
+
+                    // Try to get more details from the underlying peer connection
+                    if (peer && peer.peer && peer.peer._pc) {
+                        const pc = peer.peer._pc;
+                        console.log('   📊 RTCPeerConnection state:', pc.connectionState);
+                        console.log('   📊 ICE connection state:', pc.iceConnectionState);
+                        console.log('   📊 ICE gathering state:', pc.iceGatheringState);
+                        console.log('   📊 Signaling state:', pc.signalingState);
+                    }
+                }
+            });
+
+            // Also monitor connection state changes
+            if (peer && peer.peer) {
+                const internalPeer = peer.peer;
+
+                // Hook into the internal SimplePeer instance
+                if (internalPeer._pc) {
+                    const pc = internalPeer._pc;
+
+                    pc.oniceconnectionstatechange = () => {
+                        console.log(`🧊 ICE connection state: ${pc.iceConnectionState}`);
+                    };
+
+                    pc.onconnectionstatechange = () => {
+                        console.log(`🔗 Connection state: ${pc.connectionState}`);
+                    };
+
+                    pc.onicegatheringstatechange = () => {
+                        console.log(`📡 ICE gathering state: ${pc.iceGatheringState}`);
+                    };
+                }
+            }
+        }
+
+        // Send message
+        btnSend.onclick = sendMessage;
+        messageInput.onkeydown = (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                sendMessage();
+            }
+        };
+
+        async function sendMessage() {
+            const text = messageInput.value.trim();
+            if (!text || !peer) return;
+
+            try {
+                await peer.send({
+                    type: 'update',
+                    payload: text,
+                    timestamp: Date.now(),
+                    sender: peer.id
+                });
+
+                addMessage(text, 'sent');
+                messageInput.value = '';
+                messageInput.style.height = 'auto';
+
+            } catch (error) {
+                console.error('❌ Send error:', error);
+                alert('Failed to send message');
+            }
+        }
+
+        // UI helpers
+        function addMessage(text, type) {
+            const msg = document.createElement('div');
+            msg.className = `message ${type}`;
+            msg.textContent = text;
+
+            const meta = document.createElement('div');
+            meta.className = 'message-meta';
+            meta.textContent = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+            msg.appendChild(meta);
+
+            chatContainer.appendChild(msg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        function addSystemMessage(text) {
+            const msg = document.createElement('div');
+            msg.className = 'system-message';
+            msg.textContent = text;
+            chatContainer.appendChild(msg);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        // Copy to clipboard
+        async function copyToClipboard(text, successMsg) {
+            try {
+                if (navigator.clipboard && navigator.clipboard.writeText) {
+                    await navigator.clipboard.writeText(text);
+                    alert(successMsg || 'Copied!');
+                } else {
+                    // Fallback
+                    const textarea = document.createElement('textarea');
+                    textarea.value = text;
+                    textarea.style.position = 'fixed';
+                    textarea.style.opacity = '0';
+                    document.body.appendChild(textarea);
+                    textarea.select();
+                    const success = document.execCommand('copy');
+                    document.body.removeChild(textarea);
+
+                    if (success) {
+                        alert(successMsg || 'Copied!');
+                    } else {
+                        throw new Error('Copy failed');
+                    }
+                }
+            } catch (err) {
+                console.error('Copy failed:', err);
+                alert('Failed to copy. Please select and copy manually.');
+            }
+        }
+
+        // Auto-resize textarea
+        messageInput.oninput = function() {
+            this.style.height = 'auto';
+            this.style.height = Math.min(this.scrollHeight, 100) + 'px';
+        };
+
+        // Handle page visibility changes (iOS background/foreground)
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) {
+                console.log('📱 Page hidden (backgrounded)');
+            } else {
+                console.log('📱 Page visible (foregrounded)');
+
+                // Check connection status when coming back
+                if (peer && peer.peer && peer.peer._channel) {
+                    const channelState = peer.peer._channel.readyState;
+                    console.log(`   Data channel state: ${channelState}`);
+
+                    if (channelState === 'open' && !statusIndicator.classList.contains('connected')) {
+                        console.log('   ✅ Restoring connected UI state');
+                        statusIndicator.classList.add('connected');
+                        statusIndicator.classList.remove('connecting');
+                        messageInput.disabled = false;
+                        btnSend.disabled = false;
+                    }
+                }
+            }
+        });
+
+        // Periodic connection health check (every 5 seconds when connected)
+        setInterval(() => {
+            if (peer && peer.peer && peer.peer._channel) {
+                const channelState = peer.peer._channel.readyState;
+
+                if (channelState === 'open' && !statusIndicator.classList.contains('connected')) {
+                    console.log('🔄 Connection detected but UI not updated - fixing...');
+                    statusIndicator.classList.add('connected');
+                    statusIndicator.classList.remove('connecting');
+                    messageInput.disabled = false;
+                    btnSend.disabled = false;
+                } else if (channelState !== 'open' && statusIndicator.classList.contains('connected')) {
+                    console.log('🔄 Connection lost but UI shows connected - fixing...');
+                    statusIndicator.classList.remove('connected', 'connecting');
+                    messageInput.disabled = true;
+                    btnSend.disabled = true;
+                }
+            }
+        }, 5000);
+    </script>
+</body>
+</html>

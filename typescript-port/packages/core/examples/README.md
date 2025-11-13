@@ -229,22 +229,37 @@ interface ShareCode {
 
 ## 💡 Tips for Mobile Testing
 
+### 🚨 **CRITICAL: Use IP Address, NOT localhost!**
+
+**❌ WRONG (will fail cross-device):**
+```
+http://localhost:3456/examples/chat.html
+```
+
+**✅ CORRECT (will work cross-device):**
+```
+http://192.168.1.127:3456/examples/chat.html
+```
+
+**Why?** When you access via `localhost`, browsers **do NOT generate local network ICE candidates**. You'll only get public IP candidates from STUN, which can't reach devices on the same WiFi network. This causes "Connection failed" errors.
+
 **Find your computer's IP address**:
 ```bash
 ifconfig | grep "inet " | grep -v 127.0.0.1
 # Example output: inet 192.168.1.127
 ```
 
-**On your phone**:
-1. Connect to same WiFi as computer
-2. Open Safari/Chrome
-3. Navigate to: `http://192.168.1.127:3456/examples/simple-demo.html`
-4. Use the copy/paste flow (textareas auto-select on tap)
+**On your computer AND phone**:
+1. **BOTH must connect to same WiFi network**
+2. **Computer**: Open `http://192.168.1.127:3456/examples/chat.html` (use YOUR IP)
+3. **Phone**: Open same URL `http://192.168.1.127:3456/examples/chat.html`
+4. Complete the connection flow
 
 **iOS Copy Workaround**:
 - Tap the textarea to auto-select text
 - Use iOS "Copy" from context menu
 - Or use the "Copy" button (has fallback)
+- **Turn OFF VPN** on both devices during connection setup
 
 ## 🔗 Related Files
 
